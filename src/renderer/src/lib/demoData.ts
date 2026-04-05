@@ -1,5 +1,11 @@
 import { api } from './ipc'
-import type { Stage, Severity } from '../types/cve'
+import type { Stage, Severity, Todo } from '../types/cve'
+
+// Helper: complete a todo by matching partial text
+async function completeTodo(todos: Todo[], match: string, note: string): Promise<void> {
+  const todo = todos.find(t => t.text.toLowerCase().includes(match.toLowerCase()) && !t.completed)
+  if (todo) await api.todo.complete(todo.id, { completion_note: note })
+}
 
 export async function loadDemoData(): Promise<void> {
   // ── Vendors ──
@@ -43,8 +49,8 @@ export async function loadDemoData(): Promise<void> {
 
   // ── CVEs ──
 
-  // 1. Discovery stage — just found
-  await api.cve.create({
+  // 1. Discovery stage: just found, early checklist items done
+  const xss = await api.cve.create({
     swimlane_id: acmePortal.id,
     title: 'Stored XSS in user profile bio field',
     severity: 'High' as Severity,
@@ -54,8 +60,12 @@ export async function loadDemoData(): Promise<void> {
     affected_versions: '3.2.0 - 3.4.1',
     date_discovered: '2024-11-28'
   })
+  const xssTodos = await api.todo.list(xss.id)
+  await completeTodo(xssTodos, 'Reproduce & document', 'Confirmed on Chrome and Firefox. Cookie exfiltration verified.')
+  await completeTodo(xssTodos, 'CVSS severity', 'CVSS 3.1 Base: 8.1 (High). Stored XSS with session hijack potential.')
+  await completeTodo(xssTodos, 'affected versions', 'Tested 3.2.0, 3.3.0, 3.4.1. All vulnerable. 3.1.x not affected.')
 
-  // 2. Vendor Contacted — waiting for response
+  // 2. Vendor Contacted: disclosure sent, waiting for response
   const sqlInjection = await api.cve.create({
     swimlane_id: acmeApi.id,
     title: 'SQL Injection in /api/v2/users search endpoint',
@@ -69,16 +79,24 @@ export async function loadDemoData(): Promise<void> {
     date_discovered: '2024-11-15',
     date_vendor_notified: '2024-11-18'
   })
-  // Move to Vendor Contacted
   await api.cve.move(sqlInjection.id, 'Vendor Contacted', acmeApi.id, 0)
-  // Set follow-up reminder
   const followupDate = new Date()
   followupDate.setDate(followupDate.getDate() + 5)
   await api.cve.update(sqlInjection.id, {
     followup_due_date: followupDate.toISOString().slice(0, 10)
   })
+  const sqliTodos = await api.todo.list(sqlInjection.id)
+  await completeTodo(sqliTodos, 'Reproduce & document', 'Full SQLi confirmed. UNION-based extraction of admin credentials possible.')
+  await completeTodo(sqliTodos, 'CVSS severity', 'CVSS 3.1 Base: 9.8 (Critical). Unauthenticated, full DB access.')
+  await completeTodo(sqliTodos, 'affected versions', 'All v2.x endpoints affected. v1.x uses different ORM, not vulnerable.')
+  await completeTodo(sqliTodos, 'Draft initial disclosure', 'Drafted email with PoC, impact analysis, and suggested remediation (parameterized queries).')
+  await completeTodo(sqliTodos, 'Send disclosure', 'Sent to security@acmecorp.example on Nov 18. PGP encrypted per their preference.')
+  await api.followup.create(sqlInjection.id, {
+    type: 'Email Sent',
+    note: 'Sent initial disclosure with PoC and impact analysis. Included suggested fix (parameterized queries).'
+  })
 
-  // 3. Negotiating — vendor responded
+  // 3. Negotiating: vendor responded, working on timeline
   const idor = await api.cve.create({
     swimlane_id: acmePortal.id,
     title: 'IDOR allows accessing other users\' invoices',
@@ -94,6 +112,17 @@ export async function loadDemoData(): Promise<void> {
   })
   await api.cve.move(idor.id, 'Vendor Contacted', acmePortal.id, 0)
   await api.cve.move(idor.id, 'Negotiating', acmePortal.id, 0)
+  const idorTodos = await api.todo.list(idor.id)
+  await completeTodo(idorTodos, 'Reproduce & document', 'Confirmed across multiple account pairs. All invoice endpoints affected.')
+  await completeTodo(idorTodos, 'CVSS severity', 'CVSS 3.1 Base: 7.5 (High). Any authenticated user can access any invoice.')
+  await completeTodo(idorTodos, 'affected versions', 'All v3.x versions. Authorization was removed during v3.0 refactor.')
+  await completeTodo(idorTodos, 'Draft initial disclosure', 'Drafted with full PoC showing cross-account access to PII.')
+  await completeTodo(idorTodos, 'Send disclosure', 'Sent via HackerOne on Oct 25.')
+  await completeTodo(idorTodos, 'Confirm vendor', 'Vendor acknowledged via HackerOne on Oct 28.')
+  await completeTodo(idorTodos, 'Agree on disclosure', 'Agreed on 90-day timeline. Vendor targeting Q1 patch release.')
+  const negotiatingFu = new Date()
+  negotiatingFu.setDate(negotiatingFu.getDate() + 14)
+  await api.cve.update(idor.id, { followup_due_date: negotiatingFu.toISOString().slice(0, 10) })
   await api.followup.create(idor.id, {
     type: 'Email Sent',
     note: 'Sent initial disclosure with full reproduction steps and impact analysis.'
@@ -102,8 +131,12 @@ export async function loadDemoData(): Promise<void> {
     type: 'Email Received',
     note: 'Vendor confirmed the issue. They plan to patch in their next release cycle (Q1). Proposed 90-day disclosure timeline.'
   })
+  await api.followup.create(idor.id, {
+    type: 'Meeting',
+    note: 'Had a call with their engineering lead. They understand the severity and are prioritizing the fix.'
+  })
 
-  // 4. CVE Requested
+  // 4. CVE Requested: deep into the process
   const authBypass = await api.cve.create({
     swimlane_id: globexERP.id,
     title: 'Authentication bypass via crafted JWT token',
@@ -125,8 +158,29 @@ export async function loadDemoData(): Promise<void> {
   const cveFuDate = new Date()
   cveFuDate.setDate(cveFuDate.getDate() + 10)
   await api.cve.update(authBypass.id, { followup_due_date: cveFuDate.toISOString().slice(0, 10) })
+  const authTodos = await api.todo.list(authBypass.id)
+  await completeTodo(authTodos, 'Reproduce & document', 'Reproduced with curl. Works on all endpoints. Full admin access achieved.')
+  await completeTodo(authTodos, 'CVSS severity', 'CVSS 3.1 Base: 9.8 (Critical). Complete authentication bypass.')
+  await completeTodo(authTodos, 'affected versions', 'All versions prior to 5.0. The JWT library upgrade in 5.0 rejects alg:none.')
+  await completeTodo(authTodos, 'Draft initial disclosure', 'Drafted with PoC script that generates a valid admin token.')
+  await completeTodo(authTodos, 'Send disclosure', 'Sent to hank@globex.example on Sep 15.')
+  await completeTodo(authTodos, 'Confirm vendor', 'Hank confirmed on Sep 18. Said he was "horrified but grateful."')
+  await completeTodo(authTodos, 'Agree on disclosure', 'Agreed on 90-day timeline. Patch released in v5.0.1 on Oct 20.')
+  await completeTodo(authTodos, 'Request CVE', 'Submitted to MITRE on Oct 1. Vendor is not a CNA.')
+  await api.followup.create(authBypass.id, {
+    type: 'Email Sent',
+    note: 'Initial disclosure with PoC and impact assessment.'
+  })
+  await api.followup.create(authBypass.id, {
+    type: 'Email Received',
+    note: 'Hank confirmed the issue. Patch being developed for v5.0.1.'
+  })
+  await api.followup.create(authBypass.id, {
+    type: 'Note',
+    note: 'Patch released in v5.0.1. Verified the fix works. Waiting on CVE assignment from MITRE.'
+  })
 
-  // 5. Published — recent, still on board (will trigger archive banner since >30 days)
+  // 5. Published: complete lifecycle, all todos done
   const rce = await api.cve.create({
     swimlane_id: globexERP.id,
     title: 'Remote code execution via file upload',
@@ -148,10 +202,27 @@ export async function loadDemoData(): Promise<void> {
   await api.cve.move(rce.id, 'CVE Requested', globexERP.id, 0)
   await api.cve.move(rce.id, 'Published', globexERP.id, 0)
   await api.cve.update(rce.id, { patch_status: 'patch_available', patch_url: 'https://globex.example/advisory/2024-002' })
+  const rceTodos = await api.todo.list(rce.id)
+  await completeTodo(rceTodos, 'Reproduce & document', 'Full RCE confirmed. Wrote exploit script for verification.')
+  await completeTodo(rceTodos, 'CVSS severity', 'CVSS 3.1 Base: 9.8 (Critical). Unauthenticated RCE as service account.')
+  await completeTodo(rceTodos, 'affected versions', 'Versions 4.2.0 through 4.9.x. Fixed in 5.0.0.')
+  await completeTodo(rceTodos, 'Draft initial disclosure', 'Full writeup with timeline, PoC, and vendor coordination notes.')
+  await completeTodo(rceTodos, 'Send disclosure', 'Sent to Hank on Jul 5 with PGP encryption.')
+  await completeTodo(rceTodos, 'Confirm vendor', 'Hank confirmed Jul 7. Escalated internally as P0.')
+  await completeTodo(rceTodos, 'Agree on disclosure', '90-day timeline agreed. Vendor fast-tracked the fix.')
+  await completeTodo(rceTodos, 'Request CVE', 'Submitted to MITRE Aug 1. Assigned CVE-2024-55123 on Aug 15.')
+  await completeTodo(rceTodos, 'Coordinate and finalize', 'Coordinated advisory with Globex. Published simultaneously.')
+  await completeTodo(rceTodos, 'Publish vulnerability', 'Published Oct 3. Advisory live at globex.example/advisory/2024-002.')
+  await api.followup.create(rce.id, { type: 'Email Sent', note: 'Initial disclosure with full PoC.' })
+  await api.followup.create(rce.id, { type: 'Email Received', note: 'Vendor confirmed. Treating as P0.' })
+  await api.followup.create(rce.id, { type: 'Phone Call', note: 'Call with Hank to discuss timeline. Agreed on 90-day window.' })
+  await api.followup.create(rce.id, { type: 'Email Received', note: 'Patch released in v5.0.0. Asked us to verify.' })
+  await api.followup.create(rce.id, { type: 'Note', note: 'Verified fix. Upload now validates file type server-side.' })
+  await api.followup.create(rce.id, { type: 'Note', note: 'CVE-2024-55123 assigned. Published advisory and blog post.' })
 
   // ── Archived CVEs (Hall of Fame) ──
 
-  // 6. Archived — path traversal (Acme)
+  // 6. Archived: path traversal (all todos done)
   const pathTraversal = await api.cve.create({
     swimlane_id: acmeApi.id,
     title: 'Path traversal in file download endpoint',
@@ -173,9 +244,13 @@ export async function loadDemoData(): Promise<void> {
   await api.cve.move(pathTraversal.id, 'CVE Requested', acmeApi.id, 0)
   await api.cve.move(pathTraversal.id, 'Published', acmeApi.id, 0)
   await api.cve.update(pathTraversal.id, { patch_status: 'patch_available' })
+  const ptTodos = await api.todo.list(pathTraversal.id)
+  for (const t of ptTodos) {
+    await api.todo.complete(t.id, { completion_note: 'Completed during disclosure process.' })
+  }
   await api.cve.archive(pathTraversal.id)
 
-  // 7. Archived — privilege escalation (Globex)
+  // 7. Archived: privilege escalation (all todos done)
   const privEsc = await api.cve.create({
     swimlane_id: globexERP.id,
     title: 'Privilege escalation via role parameter tampering',
@@ -197,5 +272,9 @@ export async function loadDemoData(): Promise<void> {
   await api.cve.move(privEsc.id, 'CVE Requested', globexERP.id, 0)
   await api.cve.move(privEsc.id, 'Published', globexERP.id, 0)
   await api.cve.update(privEsc.id, { patch_status: 'patch_available', patch_url: 'https://globex.example/advisory/2024-003' })
+  const peTodos = await api.todo.list(privEsc.id)
+  for (const t of peTodos) {
+    await api.todo.complete(t.id, { completion_note: 'Completed during disclosure process.' })
+  }
   await api.cve.archive(privEsc.id)
 }
