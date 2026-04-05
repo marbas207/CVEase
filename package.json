@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Desktop Kanban app for tracking CVE disclosure workflows",
   "main": "./out/main/index.js",
-  "author": "marba$ (https://github.com/marbas207)",
+  "author": "marbas (https://github.com/marbas207)",
   "homepage": ".",
   "scripts": {
     "dev": "electron-vite dev",
