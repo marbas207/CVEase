@@ -120,9 +120,7 @@ export async function loadDemoData(): Promise<void> {
   await completeTodo(idorTodos, 'Send disclosure', 'Sent via HackerOne on Oct 25.')
   await completeTodo(idorTodos, 'Confirm vendor', 'Vendor acknowledged via HackerOne on Oct 28.')
   await completeTodo(idorTodos, 'Agree on disclosure', 'Agreed on 90-day timeline. Vendor targeting Q1 patch release.')
-  const negotiatingFu = new Date()
-  negotiatingFu.setDate(negotiatingFu.getDate() + 14)
-  await api.cve.update(idor.id, { followup_due_date: negotiatingFu.toISOString().slice(0, 10) })
+  // Intentionally no followup_due_date set on this one, so it shows in "No Follow-up Set" on the dashboard
   await api.followup.create(idor.id, {
     type: 'Email Sent',
     note: 'Sent initial disclosure with full reproduction steps and impact analysis.'
