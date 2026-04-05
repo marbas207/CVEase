@@ -49,7 +49,7 @@ jobs:
 
       - name: Package (Windows)
         if: matrix.platform == 'win'
-        run: npx electron-builder --win dir --config.win.signAndEditExecutable=false --publish never
+        run: npx electron-builder --win nsis --publish never
 
       - name: Package (macOS ARM)
         if: matrix.platform == 'mac'
@@ -63,10 +63,12 @@ jobs:
         if: matrix.platform == 'linux'
         run: npx electron-builder --linux AppImage --publish never
 
-      - name: Zip (Windows)
+      - name: Rename Windows installer
         if: matrix.platform == 'win'
         shell: pwsh
-        run: Compress-Archive -Path dist/win-unpacked -DestinationPath dist/${{ matrix.artifact }}.zip
+        run: |
+          $installer = Get-ChildItem dist/*.exe | Select-Object -First 1
+          Move-Item $installer.FullName "dist/${{ matrix.artifact }}-Setup.exe"
 
       - name: Rename macOS artifact
         if: matrix.platform == 'mac' || matrix.platform == 'mac-x64'
@@ -81,7 +83,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact }}
-          path: dist/${{ matrix.artifact }}.zip
+          path: dist/${{ matrix.artifact }}-Setup.exe
 
       - name: Upload artifact (macOS)
         if: matrix.platform == 'mac' || matrix.platform == 'mac-x64'
