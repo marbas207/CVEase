@@ -177,7 +177,7 @@ export function KanbanBoard() {
           ))}
         </div>
 
-        <div className="flex items-center gap-2 p-4 border-t border-border mt-auto">
+        <div className="flex items-center gap-2 p-4 border-t border-border sticky bottom-0 bg-background z-10 shrink-0">
           <Button size="sm" onClick={() => setAddCVEOpen(true)} disabled={swimlanes.length === 0} className="gap-2">
             <Plus className="w-4 h-4" />
             Add Vulnerability
