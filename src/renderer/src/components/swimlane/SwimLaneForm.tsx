@@ -113,7 +113,7 @@ export function SwimLaneForm({ open, onOpenChange, swimlane }: Props) {
             />
           </div>
           <div className="grid gap-1.5">
-            <Label htmlFor="sw-url">Product / Advisory URL</Label>
+            <Label htmlFor="sw-url">Product URL</Label>
             <Input
               id="sw-url"
               value={url}
