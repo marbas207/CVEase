@@ -49,34 +49,45 @@ jobs:
 
       - name: Package (macOS)
         if: matrix.platform == 'mac'
-        run: npx electron-builder --mac dir --config.mac.identity=null
+        run: npx electron-builder --mac dmg --config.mac.identity=null
 
       - name: Package (Linux)
         if: matrix.platform == 'linux'
-        run: npx electron-builder --linux dir
+        run: npx electron-builder --linux AppImage
 
       - name: Zip (Windows)
         if: matrix.platform == 'win'
         shell: pwsh
         run: Compress-Archive -Path dist/win-unpacked -DestinationPath dist/${{ matrix.artifact }}.zip
 
-      - name: Zip (macOS)
+      - name: Rename macOS artifact
         if: matrix.platform == 'mac'
-        run: |
-          cd dist
-          ls -la
-          DIR=$(ls -d mac* 2>/dev/null | head -1)
-          zip -r -y ${{ matrix.artifact }}.zip "$DIR"
+        run: mv dist/*.dmg dist/${{ matrix.artifact }}.dmg
 
-      - name: Zip (Linux)
+      - name: Rename Linux artifact
         if: matrix.platform == 'linux'
-        run: cd dist && zip -r ${{ matrix.artifact }}.zip linux-unpacked/
+        run: mv dist/*.AppImage dist/${{ matrix.artifact }}.AppImage
 
-      - name: Upload artifact
+      - name: Upload artifact (Windows)
+        if: matrix.platform == 'win'
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact }}
           path: dist/${{ matrix.artifact }}.zip
+
+      - name: Upload artifact (macOS)
+        if: matrix.platform == 'mac'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: dist/${{ matrix.artifact }}.dmg
+
+      - name: Upload artifact (Linux)
+        if: matrix.platform == 'linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: dist/${{ matrix.artifact }}.AppImage
 
   release:
     needs: build
@@ -92,6 +103,6 @@ jobs:
         with:
           files: |
             artifacts/CVEase-win/CVEase-win.zip
-            artifacts/CVEase-mac/CVEase-mac.zip
-            artifacts/CVEase-linux/CVEase-linux.zip
+            artifacts/CVEase-mac/CVEase-mac.dmg
+            artifacts/CVEase-linux/CVEase-linux.AppImage
           generate_release_notes: true
