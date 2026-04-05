@@ -21,6 +21,9 @@ import {
 import { useBoardStore } from '../../store/boardStore'
 import { calcDeadline } from '../../lib/utils'
 import { STAGES, SEVERITIES, STAGE_ORDER } from '../../lib/constants'
+
+// Which stage index the CVE is at (for showing/hiding form sections)
+function stageIdx(s: Stage): number { return STAGE_ORDER[s] ?? 0 }
 import type { CVE, Stage, Severity, PatchStatus, BountyStatus, CreateCVEInput, UpdateCVEInput } from '../../types/cve'
 
 function autoAdvanceStage(
@@ -244,7 +247,7 @@ export function CVEForm({ open, onOpenChange, swimlaneId, cve }: Props) {
             </div>
           )}
 
-          {/* Basic info */}
+          {/* ── Always visible: core info ── */}
           <div className="grid gap-1.5">
             <Label htmlFor="cve-title">Title / Short Description *</Label>
             <Input
@@ -256,7 +259,7 @@ export function CVEForm({ open, onOpenChange, swimlaneId, cve }: Props) {
             />
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 gap-4">
             <div className="grid gap-1.5">
               <Label>Severity *</Label>
               <Select value={severity} onValueChange={v => setSeverity(v as Severity)}>
@@ -266,119 +269,94 @@ export function CVEForm({ open, onOpenChange, swimlaneId, cve }: Props) {
                 </SelectContent>
               </Select>
             </div>
-            <div className="grid gap-1.5">
-              <Label>Stage</Label>
-              <Select value={stage} onValueChange={v => setStage(v as Stage)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {STAGES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid gap-1.5">
-              <Label htmlFor="cve-id">CVE ID</Label>
-              <Input
-                id="cve-id"
-                value={cveId}
-                onChange={e => setCveId(e.target.value)}
-                placeholder="CVE-2024-XXXXX"
-                className="font-mono"
-              />
-            </div>
+            {isEdit && (
+              <div className="grid gap-1.5">
+                <Label>Stage</Label>
+                <Select value={stage} onValueChange={v => setStage(v as Stage)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {STAGES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
 
-          {/* Affected component + versions */}
           <div className="grid grid-cols-2 gap-4">
             <div className="grid gap-1.5">
               <Label htmlFor="cve-component">Affected Component / Location</Label>
-              <Input
-                id="cve-component"
-                value={affectedComponent}
-                onChange={e => setAffectedComponent(e.target.value)}
-                placeholder="e.g. Login page, /api/v1/admin"
-              />
+              <Input id="cve-component" value={affectedComponent} onChange={e => setAffectedComponent(e.target.value)} placeholder="e.g. Login page, /api/v1/admin" />
             </div>
             <div className="grid gap-1.5">
               <Label htmlFor="cve-versions">Affected Versions</Label>
-              <Input
-                id="cve-versions"
-                value={affectedVersions}
-                onChange={e => setAffectedVersions(e.target.value)}
-                placeholder="e.g. 2.0-2.4, < 3.1.2, all"
-                className="font-mono"
-              />
+              <Input id="cve-versions" value={affectedVersions} onChange={e => setAffectedVersions(e.target.value)} placeholder="e.g. 2.0-2.4, < 3.1.2, all" className="font-mono" />
             </div>
           </div>
 
-          {/* Reproduction steps */}
           <div className="grid gap-1.5">
             <Label htmlFor="cve-desc">Reproduction Steps / Description</Label>
             <Textarea
               id="cve-desc"
               value={description}
               onChange={e => setDescription(e.target.value)}
-              placeholder="Detailed steps to reproduce the vulnerability, impact analysis, affected components..."
-              className="min-h-[140px] font-mono text-xs"
+              placeholder="Detailed steps to reproduce the vulnerability, impact analysis..."
+              className="min-h-[100px] font-mono text-xs"
             />
           </div>
 
-          {/* Vendor contact */}
-          <div>
-            <p className="text-sm font-semibold mb-3">Vendor Contact</p>
-            <div className="grid grid-cols-3 gap-4">
-              <div className="grid gap-1.5">
-                <Label htmlFor="contact-name">Name</Label>
-                <Input id="contact-name" value={contactName} onChange={e => setContactName(e.target.value)} placeholder="Security Team" />
-              </div>
-              <div className="grid gap-1.5">
-                <Label htmlFor="contact-email">Email</Label>
-                <Input id="contact-email" type="email" value={contactEmail} onChange={e => setContactEmail(e.target.value)} placeholder="security@vendor.com" />
-              </div>
-              <div className="grid gap-1.5">
-                <Label htmlFor="contact-other">Other (Phone / HackerOne / etc.)</Label>
-                <Input id="contact-other" value={contactOther} onChange={e => setContactOther(e.target.value)} placeholder="HackerOne: vendor" />
-              </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="grid gap-1.5">
+              <Label htmlFor="date-discovered">Date Discovered</Label>
+              <Input id="date-discovered" type="date" value={dateDiscovered} onChange={e => setDateDiscovered(e.target.value)} />
+            </div>
+            <div className="grid gap-1.5">
+              <Label>CVE Eligible</Label>
+              <Select value={String(cveEligible)} onValueChange={v => setCveEligible(v === 'null' ? null : Number(v))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1">Yes</SelectItem>
+                  <SelectItem value="0">No (bounty only)</SelectItem>
+                  <SelectItem value="null">Unknown</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
-          {/* Patch status */}
-          <div>
-            <p className="text-sm font-semibold mb-3">Patch Status</p>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-1.5">
-                <Label>Status</Label>
-                <Select value={patchStatus} onValueChange={v => setPatchStatus(v as PatchStatus)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="unknown">Unknown</SelectItem>
-                    <SelectItem value="no_patch">No Patch Available</SelectItem>
-                    <SelectItem value="patch_available">Patch Available</SelectItem>
-                    <SelectItem value="wont_fix">Won't Fix</SelectItem>
-                  </SelectContent>
-                </Select>
+          {/* ── Vendor Contacted+ : contact info & dates ── */}
+          {stageIdx(stage) >= stageIdx('Vendor Contacted') && (
+            <>
+              <div>
+                <p className="text-sm font-semibold mb-3">Vendor Contact</p>
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="grid gap-1.5">
+                    <Label htmlFor="contact-name">Name</Label>
+                    <Input id="contact-name" value={contactName} onChange={e => setContactName(e.target.value)} placeholder="Security Team" />
+                  </div>
+                  <div className="grid gap-1.5">
+                    <Label htmlFor="contact-email">Email</Label>
+                    <Input id="contact-email" type="email" value={contactEmail} onChange={e => setContactEmail(e.target.value)} placeholder="security@vendor.com" />
+                  </div>
+                  <div className="grid gap-1.5">
+                    <Label htmlFor="contact-other">Other (HackerOne / etc.)</Label>
+                    <Input id="contact-other" value={contactOther} onChange={e => setContactOther(e.target.value)} placeholder="HackerOne: vendor" />
+                  </div>
+                </div>
               </div>
-              <div className="grid gap-1.5">
-                <Label htmlFor="patch-url">Patch / Advisory URL</Label>
-                <Input id="patch-url" value={patchUrl} onChange={e => setPatchUrl(e.target.value)} placeholder="https://..." />
-              </div>
-            </div>
-          </div>
 
-          {/* Bug Bounty */}
-          <div>
-            <p className="text-sm font-semibold mb-3">Bug Bounty</p>
-            <div className="grid grid-cols-3 gap-4">
-              <div className="grid gap-1.5">
-                <Label>CVE Eligible</Label>
-                <Select value={String(cveEligible)} onValueChange={v => setCveEligible(v === 'null' ? null : Number(v))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="1">Yes</SelectItem>
-                    <SelectItem value="0">No</SelectItem>
-                    <SelectItem value="null">Unknown</SelectItem>
-                  </SelectContent>
-                </Select>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-1.5">
+                  <Label htmlFor="date-notified">Date Vendor Notified</Label>
+                  <Input id="date-notified" type="date" value={dateVendorNotified} onChange={e => setDateVendorNotified(e.target.value)} />
+                </div>
+                <div className="grid gap-1.5">
+                  <Label htmlFor="date-deadline">Disclosure Deadline</Label>
+                  <Input id="date-deadline" type="date" value={effectiveDeadline} onChange={e => setDisclosureDeadline(e.target.value)} />
+                  {!disclosureDeadline && autoDeadline && (
+                    <p className="text-[11px] text-muted-foreground">Auto-set to 90 days from notification</p>
+                  )}
+                </div>
               </div>
+
               <div className="grid gap-1.5">
                 <Label>Bounty Eligible</Label>
                 <Select value={String(bountyEligible)} onValueChange={v => setBountyEligible(v === 'null' ? null : Number(v))}>
@@ -390,96 +368,118 @@ export function CVEForm({ open, onOpenChange, swimlaneId, cve }: Props) {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="grid gap-1.5">
-                <Label>Bounty Status</Label>
-                <Select value={bountyStatus} onValueChange={v => setBountyStatus(v as BountyStatus)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">None</SelectItem>
-                    <SelectItem value="submitted">Submitted</SelectItem>
-                    <SelectItem value="approved">Approved</SelectItem>
-                    <SelectItem value="paid">Paid</SelectItem>
-                    <SelectItem value="rejected">Rejected</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            {bountyStatus !== 'none' && (
-              <div className="grid grid-cols-3 gap-4 mt-3">
-                <div className="grid gap-1.5">
-                  <Label htmlFor="bounty-amount">Amount</Label>
-                  <Input id="bounty-amount" value={bountyAmount} onChange={e => setBountyAmount(e.target.value)} placeholder="$500 USD" />
-                </div>
-                <div className="grid gap-1.5">
-                  <Label htmlFor="bounty-paid-date">Date Paid</Label>
-                  <Input id="bounty-paid-date" type="date" value={bountyPaidDate} onChange={e => setBountyPaidDate(e.target.value)} />
-                </div>
-                <div className="grid gap-1.5">
-                  <Label htmlFor="bounty-url">Report URL</Label>
-                  <Input id="bounty-url" value={bountyUrl} onChange={e => setBountyUrl(e.target.value)} placeholder="https://..." />
-                </div>
-              </div>
-            )}
-          </div>
+            </>
+          )}
 
-          {/* VINCE escalation */}
-          <div>
-            <p className="text-sm font-semibold mb-3">Escalation</p>
-            <div className="flex items-center gap-3 mb-3">
-              <button
-                type="button"
-                onClick={() => setEscalatedToVince(!escalatedToVince)}
-                className={`relative w-9 h-5 rounded-full transition-colors ${escalatedToVince ? 'bg-primary' : 'bg-muted'}`}
-              >
-                <span className={`block w-4 h-4 rounded-full bg-white shadow transition-transform ${escalatedToVince ? 'translate-x-4' : 'translate-x-0.5'}`} />
-              </button>
-              <Label className="cursor-pointer" onClick={() => setEscalatedToVince(!escalatedToVince)}>
-                Escalated to VINCE (CERT/CC)
-              </Label>
-            </div>
-            {escalatedToVince && (
-              <div className="grid gap-1.5">
-                <Label htmlFor="vince-case">VINCE Case ID</Label>
-                <Input id="vince-case" value={vinceCaseId} onChange={e => setVinceCaseId(e.target.value)} placeholder="VU#123456" className="font-mono" />
+          {/* ── Negotiating+ : patch status, escalation ── */}
+          {stageIdx(stage) >= stageIdx('Negotiating') && (
+            <>
+              <div>
+                <p className="text-sm font-semibold mb-3">Patch Status</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="grid gap-1.5">
+                    <Label>Status</Label>
+                    <Select value={patchStatus} onValueChange={v => setPatchStatus(v as PatchStatus)}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="unknown">Unknown</SelectItem>
+                        <SelectItem value="no_patch">No Patch Available</SelectItem>
+                        <SelectItem value="patch_available">Patch Available</SelectItem>
+                        <SelectItem value="wont_fix">Won't Fix</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="grid gap-1.5">
+                    <Label htmlFor="patch-url">Patch / Advisory URL</Label>
+                    <Input id="patch-url" value={patchUrl} onChange={e => setPatchUrl(e.target.value)} placeholder="https://..." />
+                  </div>
+                </div>
               </div>
-            )}
-          </div>
 
-          {/* Key dates */}
-          <div>
-            <p className="text-sm font-semibold mb-3">Key Dates</p>
+              <div>
+                <p className="text-sm font-semibold mb-3">Escalation</p>
+                <div className="flex items-center gap-3 mb-3">
+                  <button
+                    type="button"
+                    onClick={() => setEscalatedToVince(!escalatedToVince)}
+                    className={`relative w-9 h-5 rounded-full transition-colors ${escalatedToVince ? 'bg-primary' : 'bg-muted'}`}
+                  >
+                    <span className={`block w-4 h-4 rounded-full bg-white shadow transition-transform ${escalatedToVince ? 'translate-x-4' : 'translate-x-0.5'}`} />
+                  </button>
+                  <Label className="cursor-pointer" onClick={() => setEscalatedToVince(!escalatedToVince)}>
+                    Escalated to VINCE (CERT/CC)
+                  </Label>
+                </div>
+                {escalatedToVince && (
+                  <div className="grid gap-1.5">
+                    <Label htmlFor="vince-case">VINCE Case ID</Label>
+                    <Input id="vince-case" value={vinceCaseId} onChange={e => setVinceCaseId(e.target.value)} placeholder="VU#123456" className="font-mono" />
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+
+          {/* ── CVE Requested+ : CVE ID, date requested ── */}
+          {stageIdx(stage) >= stageIdx('CVE Requested') && cveEligible !== 0 && (
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-1.5">
-                <Label htmlFor="date-discovered">Date Discovered</Label>
-                <Input id="date-discovered" type="date" value={dateDiscovered} onChange={e => setDateDiscovered(e.target.value)} />
-              </div>
-              <div className="grid gap-1.5">
-                <Label htmlFor="date-notified">Date Vendor Notified</Label>
-                <Input id="date-notified" type="date" value={dateVendorNotified} onChange={e => setDateVendorNotified(e.target.value)} />
-              </div>
-              <div className="grid gap-1.5">
-                <Label htmlFor="date-deadline">Disclosure Deadline</Label>
-                <Input
-                  id="date-deadline"
-                  type="date"
-                  value={effectiveDeadline}
-                  onChange={e => setDisclosureDeadline(e.target.value)}
-                  placeholder="Auto-fills to 90 days from notification"
-                />
-                {!disclosureDeadline && autoDeadline && (
-                  <p className="text-[11px] text-muted-foreground">Auto-set to 90 days from vendor notification</p>
-                )}
+                <Label htmlFor="cve-id">CVE ID</Label>
+                <Input id="cve-id" value={cveId} onChange={e => setCveId(e.target.value)} placeholder="CVE-2024-XXXXX" className="font-mono" />
               </div>
               <div className="grid gap-1.5">
                 <Label htmlFor="date-cve-req">Date CVE Requested</Label>
                 <Input id="date-cve-req" type="date" value={dateCveRequested} onChange={e => setDateCveRequested(e.target.value)} />
               </div>
-              <div className="grid gap-1.5 col-span-2">
+            </div>
+          )}
+
+          {/* ── Published : disclosure date, bounty outcome ── */}
+          {stageIdx(stage) >= stageIdx('Published') && (
+            <>
+              <div className="grid gap-1.5">
                 <Label htmlFor="date-disclosed">Date Publicly Disclosed</Label>
                 <Input id="date-disclosed" type="date" value={dateDisclosed} onChange={e => setDateDisclosed(e.target.value)} />
               </div>
-            </div>
-          </div>
+
+              {bountyEligible === 1 && (
+                <div>
+                  <p className="text-sm font-semibold mb-3">Bounty Outcome</p>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="grid gap-1.5">
+                      <Label>Status</Label>
+                      <Select value={bountyStatus} onValueChange={v => setBountyStatus(v as BountyStatus)}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">None</SelectItem>
+                          <SelectItem value="submitted">Submitted</SelectItem>
+                          <SelectItem value="approved">Approved</SelectItem>
+                          <SelectItem value="paid">Paid</SelectItem>
+                          <SelectItem value="rejected">Rejected</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="grid gap-1.5">
+                      <Label htmlFor="bounty-amount">Amount</Label>
+                      <Input id="bounty-amount" value={bountyAmount} onChange={e => setBountyAmount(e.target.value)} placeholder="$500 USD" />
+                    </div>
+                  </div>
+                  {(bountyStatus === 'paid' || bountyStatus === 'approved') && (
+                    <div className="grid grid-cols-2 gap-4 mt-3">
+                      <div className="grid gap-1.5">
+                        <Label htmlFor="bounty-paid-date">Date Paid</Label>
+                        <Input id="bounty-paid-date" type="date" value={bountyPaidDate} onChange={e => setBountyPaidDate(e.target.value)} />
+                      </div>
+                      <div className="grid gap-1.5">
+                        <Label htmlFor="bounty-url">Report URL</Label>
+                        <Input id="bounty-url" value={bountyUrl} onChange={e => setBountyUrl(e.target.value)} placeholder="https://..." />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
+          )}
         </div>
 
         <DialogFooter>
