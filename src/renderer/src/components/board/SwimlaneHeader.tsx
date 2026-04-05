@@ -38,6 +38,9 @@ export function SwimlaneHeader({ swimlane, onAddCVE, onEdit }: Props) {
           {(vendorRecord?.is_cna === 1 || swimlane.vendor_is_cna === 1) && (
             <span className="ml-1.5 text-[10px] font-bold text-primary bg-primary/10 rounded px-1 py-0.5">CNA</span>
           )}
+          {swimlane.bounty_in_scope === 1 && (
+            <span className="ml-1.5 text-[10px] font-bold text-green-500 bg-green-500/10 rounded px-1 py-0.5">Bounty</span>
+          )}
         </p>
       </div>
       <div className={cn('flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity no-drag')}>
