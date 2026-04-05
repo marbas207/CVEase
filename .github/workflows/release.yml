@@ -8,9 +8,13 @@ on:
 permissions:
   contents: write
 
+env:
+  CSC_IDENTITY_AUTO_DISCOVERY: false
+
 jobs:
   build:
     strategy:
+      fail-fast: false
       matrix:
         include:
           - os: windows-latest
@@ -30,7 +34,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
 
       - name: Install dependencies
@@ -45,7 +49,7 @@ jobs:
 
       - name: Package (macOS)
         if: matrix.platform == 'mac'
-        run: npx electron-builder --mac dir
+        run: npx electron-builder --mac dir --config.mac.identity=null
 
       - name: Package (Linux)
         if: matrix.platform == 'linux'
@@ -58,7 +62,7 @@ jobs:
 
       - name: Zip (macOS)
         if: matrix.platform == 'mac'
-        run: cd dist && zip -r ${{ matrix.artifact }}.zip mac-unpacked/
+        run: cd dist && zip -r -y ${{ matrix.artifact }}.zip mac-unpacked/
 
       - name: Zip (Linux)
         if: matrix.platform == 'linux'
