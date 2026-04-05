@@ -68,10 +68,12 @@
     },
     "forceCodeSigning": false,
     "mac": {
-      "target": "dmg"
+      "target": "dmg",
+      "icon": "build/icon.png"
     },
     "linux": {
-      "target": "AppImage"
+      "target": "AppImage",
+      "icon": "build/icon.png"
     },
     "extraResources": [
       {
@@ -80,6 +82,14 @@
         "filter": [
           "**/*.node"
         ]
+      },
+      {
+        "from": "build/icon.ico",
+        "to": "icon.ico"
+      },
+      {
+        "from": "build/icon.png",
+        "to": "icon.png"
       }
     ]
   }

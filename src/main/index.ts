@@ -1,11 +1,15 @@
-import { app, shell, BrowserWindow, nativeImage } from 'electron'
+import { app, shell, BrowserWindow } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { initDatabase } from './db/database'
 import { registerAllHandlers } from './ipc'
 
 function createWindow(): void {
-  const iconPath = join(__dirname, '../../build/icon.ico')
+  // In dev: build/icon.ico relative to project root
+  // In production: resources/icon.ico next to the app
+  const iconPath = is.dev
+    ? join(__dirname, '../../build/icon.ico')
+    : join(process.resourcesPath, 'icon.ico')
 
   const mainWindow = new BrowserWindow({
     title: 'CVEase',
