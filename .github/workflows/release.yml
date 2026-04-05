@@ -1,0 +1,89 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            platform: win
+            artifact: CVEase-win
+          - os: macos-latest
+            platform: mac
+            artifact: CVEase-mac
+          - os: ubuntu-latest
+            platform: linux
+            artifact: CVEase-linux
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Package (Windows)
+        if: matrix.platform == 'win'
+        run: npx electron-builder --win dir --config.win.signAndEditExecutable=false
+
+      - name: Package (macOS)
+        if: matrix.platform == 'mac'
+        run: npx electron-builder --mac dir
+
+      - name: Package (Linux)
+        if: matrix.platform == 'linux'
+        run: npx electron-builder --linux dir
+
+      - name: Zip (Windows)
+        if: matrix.platform == 'win'
+        shell: pwsh
+        run: Compress-Archive -Path dist/win-unpacked -DestinationPath dist/${{ matrix.artifact }}.zip
+
+      - name: Zip (macOS)
+        if: matrix.platform == 'mac'
+        run: cd dist && zip -r ${{ matrix.artifact }}.zip mac-unpacked/
+
+      - name: Zip (Linux)
+        if: matrix.platform == 'linux'
+        run: cd dist && zip -r ${{ matrix.artifact }}.zip linux-unpacked/
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: dist/${{ matrix.artifact }}.zip
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            artifacts/CVEase-win/CVEase-win.zip
+            artifacts/CVEase-mac/CVEase-mac.zip
+            artifacts/CVEase-linux/CVEase-linux.zip
+          generate_release_notes: true
