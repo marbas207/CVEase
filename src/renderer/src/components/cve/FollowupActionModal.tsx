@@ -43,7 +43,7 @@ interface Props {
 }
 
 export function FollowupActionModal({ open, onOpenChange, cveId }: Props) {
-  const { getCVEById, updateCVE } = useBoardStore()
+  const { getCVEById, updateCVE, loadBoard } = useBoardStore()
   const cve = getCVEById(cveId)
 
   const [activityType, setActivityType] = useState<ActivityType>('Email Sent')
@@ -68,6 +68,9 @@ export function FollowupActionModal({ open, onOpenChange, cveId }: Props) {
       await updateCVE(cveId, {
         followup_due_date: nextFollowup || null
       })
+
+      // Reload to ensure dashboard reflects changes
+      await loadBoard()
 
       // Reset and close
       setNote('')
