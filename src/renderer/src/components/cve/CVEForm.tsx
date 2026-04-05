@@ -66,6 +66,7 @@ export function CVEForm({ open, onOpenChange, swimlaneId, cve }: Props) {
   const { addCVE, updateCVE, getVendorForSwimlane, swimlanes, vendors } = useBoardStore()
   const isEdit = !!cve
 
+  const [selectedVendorId, setSelectedVendorId] = useState('')
   const [selectedSwimlaneId, setSelectedSwimlaneId] = useState(swimlaneId ?? '')
   const [title, setTitle] = useState('')
   const [severity, setSeverity] = useState<Severity>('High')
@@ -113,6 +114,7 @@ export function CVEForm({ open, onOpenChange, swimlaneId, cve }: Props) {
 
   useEffect(() => {
     if (open) {
+      setSelectedVendorId('')
       setSelectedSwimlaneId(swimlaneId ?? '')
       setTitle(cve?.title ?? '')
       setSeverity(cve?.severity ?? 'High')
@@ -226,24 +228,42 @@ export function CVEForm({ open, onOpenChange, swimlaneId, cve }: Props) {
         </DialogHeader>
 
         <div className="grid gap-5 py-2">
-          {/* Swimlane picker (when not pre-set) */}
+          {/* Vendor → Product picker (when not pre-set) */}
           {!isEdit && !swimlaneId && (
-            <div className="grid gap-1.5">
-              <Label>Software / Product *</Label>
-              <Select value={selectedSwimlaneId} onValueChange={setSelectedSwimlaneId}>
-                <SelectTrigger><SelectValue placeholder="Select software..." /></SelectTrigger>
-                <SelectContent>
-                  {swimlanes.map(lane => {
-                    const v = lane.vendor_id ? vendors.find(vn => vn.id === lane.vendor_id) : undefined
-                    return (
-                      <SelectItem key={lane.id} value={lane.id}>
-                        {lane.software_name}
-                        {v && <span className="text-muted-foreground ml-1">({v.name})</span>}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-1.5">
+                <Label>Vendor *</Label>
+                <Select value={selectedVendorId} onValueChange={v => { setSelectedVendorId(v); setSelectedSwimlaneId('') }}>
+                  <SelectTrigger><SelectValue placeholder="Select vendor..." /></SelectTrigger>
+                  <SelectContent>
+                    {vendors.map(v => (
+                      <SelectItem key={v.id} value={v.id}>
+                        {v.name}
+                        {v.has_bounty_program === 1 && <span className="ml-1 text-[10px] font-bold text-primary">Bounty</span>}
                       </SelectItem>
-                    )
-                  })}
-                </SelectContent>
-              </Select>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-1.5">
+                <Label>Software / Product *</Label>
+                <Select
+                  value={selectedSwimlaneId}
+                  onValueChange={setSelectedSwimlaneId}
+                  disabled={!selectedVendorId}
+                >
+                  <SelectTrigger><SelectValue placeholder={selectedVendorId ? 'Select product...' : 'Select vendor first'} /></SelectTrigger>
+                  <SelectContent>
+                    {swimlanes
+                      .filter(lane => lane.vendor_id === selectedVendorId)
+                      .map(lane => (
+                        <SelectItem key={lane.id} value={lane.id}>
+                          {lane.software_name}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           )}
 
