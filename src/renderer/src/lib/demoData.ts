@@ -13,12 +13,11 @@ export async function loadDemoData(): Promise<void> {
     name: 'Acme Corp',
     security_contact_name: 'Acme Security Team',
     security_contact_email: 'security@acmecorp.example',
-    security_contact_other: 'HackerOne: acme-corp',
     is_cna: true,
     has_bounty_program: true,
     bounty_program_url: 'https://hackerone.com/acme-corp',
     url: 'https://acmecorp.com',
-    notes: 'Generally responsive within 48 hours. Prefers PGP-encrypted emails.'
+    notes: 'HackerOne: acme-corp. Generally responsive within 48 hours. Prefers PGP-encrypted emails.'
   })
 
   const globex = await api.vendor.create({
@@ -34,12 +33,11 @@ export async function loadDemoData(): Promise<void> {
     name: 'Initech Solutions',
     security_contact_name: 'Security Operations',
     security_contact_email: 'security@initech.example',
-    security_contact_other: 'Bugcrowd: initech',
     is_cna: false,
     has_bounty_program: true,
     bounty_program_url: 'https://bugcrowd.com/initech',
     url: 'https://initech.com',
-    notes: 'Active bounty program, pays within 30 days. Good communication.'
+    notes: 'Bugcrowd: initech. Active bounty program, pays within 30 days. Good communication.'
   })
 
   // ── Software / Products ──
