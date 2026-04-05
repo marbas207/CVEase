@@ -30,6 +30,18 @@ export async function loadDemoData(): Promise<void> {
     notes: 'Small team, may take a while to respond. No formal bug bounty program.'
   })
 
+  const initech = await api.vendor.create({
+    name: 'Initech Solutions',
+    security_contact_name: 'Security Operations',
+    security_contact_email: 'security@initech.example',
+    security_contact_other: 'Bugcrowd: initech',
+    is_cna: false,
+    has_bounty_program: true,
+    bounty_program_url: 'https://bugcrowd.com/initech',
+    url: 'https://initech.com',
+    notes: 'Active bounty program, pays within 30 days. Good communication.'
+  })
+
   // ── Software / Products ──
   const acmePortal = await api.swimlane.create({
     software_name: 'Acme Customer Portal',
@@ -47,6 +59,18 @@ export async function loadDemoData(): Promise<void> {
     software_name: 'Globex ERP Suite',
     vendor: globex.name,
     vendor_id: globex.id
+  })
+
+  const initechCloud = await api.swimlane.create({
+    software_name: 'Initech Cloud Platform',
+    vendor: initech.name,
+    vendor_id: initech.id
+  })
+
+  const initechMobile = await api.swimlane.create({
+    software_name: 'Initech Mobile App',
+    vendor: initech.name,
+    vendor_id: initech.id
   })
 
   // ── CVEs ──
@@ -220,6 +244,81 @@ export async function loadDemoData(): Promise<void> {
   await api.followup.create(rce.id, { type: 'Email Received', note: 'Patch released in v5.0.0. Asked us to verify.' })
   await api.followup.create(rce.id, { type: 'Note', note: 'Verified fix. Upload now validates file type server-side.' })
   await api.followup.create(rce.id, { type: 'Note', note: 'CVE-2024-55123 assigned. Published advisory and blog post.' })
+
+  // ── Initech CVEs ──
+
+  // 6. Bounty-only (no CVE): SSRF in cloud platform, paid $1,000
+  const ssrf = await api.cve.create({
+    swimlane_id: initechCloud.id,
+    title: 'SSRF via webhook URL parameter',
+    severity: 'High' as Severity,
+    stage: 'Discovery' as Stage,
+    description: '1. Create a webhook integration\n2. Set callback URL to http://169.254.169.254/latest/meta-data/\n3. Server fetches the URL server-side\n4. AWS metadata returned in webhook test response\n5. Can extract IAM credentials from instance metadata',
+    vendor_contact_name: 'Security Operations',
+    vendor_contact_email: 'security@initech.example',
+    affected_component: 'Webhook integrations',
+    affected_versions: 'All versions',
+    date_discovered: '2024-11-01',
+    date_vendor_notified: '2024-11-05',
+    date_disclosed: '2024-12-20',
+    cve_eligible: 0
+  })
+  await api.cve.move(ssrf.id, 'Vendor Contacted', initechCloud.id, 0)
+  await api.cve.move(ssrf.id, 'Negotiating', initechCloud.id, 0)
+  await api.cve.move(ssrf.id, 'Published', initechCloud.id, 0)
+  await api.cve.update(ssrf.id, {
+    patch_status: 'patch_available',
+    bounty_eligible: 1,
+    bounty_status: 'paid',
+    bounty_amount: '$1,000',
+    bounty_paid_date: '2024-12-28',
+    bounty_url: 'https://bugcrowd.com/initech/reports/98765'
+  })
+  const ssrfTodos = await api.todo.list(ssrf.id)
+  await completeTodo(ssrfTodos, 'Reproduce & document', 'Confirmed SSRF. Can reach internal services and AWS metadata endpoint.')
+  await completeTodo(ssrfTodos, 'CVSS severity', 'CVSS 3.1 Base: 7.5 (High). Server-side request forgery with cloud metadata access.')
+  await completeTodo(ssrfTodos, 'affected versions', 'All versions of the webhook integration feature.')
+  await completeTodo(ssrfTodos, 'Draft initial disclosure', 'Submitted via Bugcrowd with full PoC.')
+  await completeTodo(ssrfTodos, 'Send disclosure', 'Submitted through Bugcrowd on Nov 5.')
+  await completeTodo(ssrfTodos, 'Confirm vendor', 'Triaged within 24 hours. Marked as P1.')
+  await completeTodo(ssrfTodos, 'Coordinate and finalize', 'Vendor patched and we coordinated disclosure.')
+  await completeTodo(ssrfTodos, 'Publish vulnerability', 'Published on Bugcrowd. No CVE needed per vendor.')
+  await api.followup.create(ssrf.id, { type: 'Note', note: 'Submitted via Bugcrowd. Triaged as P1 within 24h.' })
+  await api.followup.create(ssrf.id, { type: 'Email Received', note: 'Bounty approved at $1,000. Payment processing.' })
+  await api.followup.create(ssrf.id, { type: 'Note', note: 'Bounty paid. No CVE requested per vendor preference.' })
+  await api.cve.archive(ssrf.id)
+
+  // 7. Initech Mobile: open finding, bounty submitted
+  const mobileLeak = await api.cve.create({
+    swimlane_id: initechMobile.id,
+    title: 'API keys leaked in mobile app binary',
+    severity: 'Medium' as Severity,
+    stage: 'Discovery' as Stage,
+    description: '1. Decompile the Android APK using jadx\n2. Search for string "api_key" or "secret"\n3. Production API keys found hardcoded in BuildConfig class\n4. Keys grant access to internal APIs without authentication',
+    vendor_contact_name: 'Security Operations',
+    vendor_contact_email: 'security@initech.example',
+    affected_component: 'Android APK / BuildConfig',
+    affected_versions: '4.0.0 - 4.3.2',
+    date_discovered: '2024-12-10',
+    date_vendor_notified: '2024-12-12',
+    cve_eligible: 0
+  })
+  await api.cve.move(mobileLeak.id, 'Vendor Contacted', initechMobile.id, 0)
+  const mobileLeakFu = new Date()
+  mobileLeakFu.setDate(mobileLeakFu.getDate() + 7)
+  await api.cve.update(mobileLeak.id, {
+    followup_due_date: mobileLeakFu.toISOString().slice(0, 10),
+    bounty_eligible: 1,
+    bounty_status: 'submitted',
+    bounty_url: 'https://bugcrowd.com/initech/reports/99001'
+  })
+  const mobileTodos = await api.todo.list(mobileLeak.id)
+  await completeTodo(mobileTodos, 'Reproduce & document', 'Extracted keys from APK. Verified they work against prod API.')
+  await completeTodo(mobileTodos, 'CVSS severity', 'CVSS 3.1 Base: 6.5 (Medium). Requires APK decompilation but keys are static.')
+  await completeTodo(mobileTodos, 'affected versions', 'All 4.x versions. Keys appear identical across versions.')
+  await completeTodo(mobileTodos, 'Draft initial disclosure', 'Submitted via Bugcrowd with extracted keys and impact.')
+  await completeTodo(mobileTodos, 'Send disclosure', 'Submitted through Bugcrowd on Dec 12.')
+  await api.followup.create(mobileLeak.id, { type: 'Note', note: 'Submitted via Bugcrowd. Awaiting triage.' })
 
   // ── Archived CVEs (Hall of Fame) ──
 

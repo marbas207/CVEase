@@ -108,11 +108,13 @@ function ActionCard({
 function StatCard({
   label,
   value,
+  subtitle,
   icon,
   color
 }: {
   label: string
-  value: number
+  value: number | string
+  subtitle?: string
   icon: React.ReactNode
   color?: string
 }) {
@@ -122,6 +124,7 @@ function StatCard({
       <div>
         <p className="text-2xl font-bold leading-none">{value}</p>
         <p className="text-xs text-muted-foreground mt-0.5">{label}</p>
+        {subtitle && <p className="text-[11px] text-muted-foreground/70">{subtitle}</p>}
       </div>
     </div>
   )
@@ -202,6 +205,11 @@ export function DashboardPage() {
   }
 
   const paidBounties = [...cves, ...archivedCVEs].filter(c => c.bounty_status === 'paid')
+  const totalBountyValue = paidBounties.reduce((sum, c) => {
+    if (!c.bounty_amount) return sum
+    const num = parseFloat(c.bounty_amount.replace(/[^0-9.]/g, ''))
+    return isNaN(num) ? sum : sum + num
+  }, 0)
   const totalActive = cves.length
   const totalArchived = archivedCVEs.length
   const urgentCount = overdueDeadlines.length + followupsOverdue.length
@@ -245,6 +253,7 @@ export function DashboardPage() {
         <StatCard
           label="Bounties Earned"
           value={paidBounties.length}
+          subtitle={totalBountyValue > 0 ? `$${totalBountyValue.toLocaleString()}` : undefined}
           icon={<DollarSign className="w-5 h-5 text-green-400" />}
           color="bg-green-500/10"
         />
