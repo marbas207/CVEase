@@ -43,7 +43,15 @@ interface Props {
 }
 
 export function StageTransitionModal({ open, cve, targetStage, onConfirm, onCancel }: Props) {
-  const req = STAGE_REQUIREMENTS[targetStage]
+  const rawReq = STAGE_REQUIREMENTS[targetStage]
+  // Filter out CVE-specific fields when not CVE eligible
+  const req = rawReq ? {
+    ...rawReq,
+    fields: rawReq.fields.filter(f => {
+      if ((f.key === 'cve_id' || f.key === 'date_cve_requested') && cve.cve_eligible === 0) return false
+      return true
+    })
+  } : undefined
   const [fieldValues, setFieldValues] = useState<Record<string, string>>({})
   const [activityNote, setActivityNote] = useState('')
 

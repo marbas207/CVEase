@@ -50,6 +50,7 @@ export function KanbanBoard() {
   const [addLaneOpen, setAddLaneOpen] = useState(false)
   const [addVendorOpen, setAddVendorOpen] = useState(false)
   const [addCVEOpen, setAddCVEOpen] = useState(false)
+  const [moveError, setMoveError] = useState<string | null>(null)
   const [pendingMove, setPendingMove] = useState<PendingMove | null>(null)
 
   const sensors = useSensors(
@@ -97,6 +98,13 @@ export function KanbanBoard() {
         .sort((a, b) => a.sort_order - b.sort_order)
       targetIndex = destCards.findIndex(c => c.id === overCVE.id)
       if (targetIndex === -1) targetIndex = destCards.length
+    }
+
+    // Block moving to CVE Requested if not CVE eligible
+    if (destStage === 'CVE Requested' && draggedCVE.cve_eligible === 0) {
+      setMoveError('Cannot move to CVE Requested: this vulnerability is marked as not CVE eligible.')
+      rollbackDrag()
+      return
     }
 
     // If same stage, just reorder (no transition modal needed)
@@ -192,6 +200,13 @@ export function KanbanBoard() {
           </Button>
         </div>
       </div>
+
+      {moveError && (
+        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 bg-destructive text-destructive-foreground px-4 py-2 rounded-lg shadow-lg text-sm flex items-center gap-3">
+          <span>{moveError}</span>
+          <button onClick={() => setMoveError(null)} className="font-bold hover:opacity-80">X</button>
+        </div>
+      )}
 
       <DragOverlay>
         {activeCVE && <CVECard cve={activeCVE} isDragOverlay />}

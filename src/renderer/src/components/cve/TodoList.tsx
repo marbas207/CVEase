@@ -48,6 +48,11 @@ export function TodoList({ cveId }: Props) {
 
     // If this todo triggers a stage change and stage has requirements, show transition modal
     if (todo.trigger_stage && cve) {
+      // Block CVE Requested if not CVE eligible
+      if (todo.trigger_stage === 'CVE Requested' && cve.cve_eligible === 0) {
+        alert('Cannot move to CVE Requested: this vulnerability is marked as not CVE eligible.')
+        return
+      }
       const req = STAGE_REQUIREMENTS[todo.trigger_stage as Stage]
       if (req) {
         setPendingTransition({ todo, stage: todo.trigger_stage as Stage })

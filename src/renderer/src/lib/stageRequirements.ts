@@ -25,7 +25,6 @@ export const STAGE_REQUIREMENTS: Partial<Record<Stage, StageRequirement>> = {
       { key: 'date_vendor_notified', label: 'Date Notified', type: 'date', required: true },
       { key: 'vendor_contact_name',  label: 'Contact Name',  type: 'text', required: true, placeholder: 'Security Team / John Smith' },
       { key: 'vendor_contact_email', label: 'Contact Email', type: 'email', required: false, placeholder: 'security@vendor.com' },
-      { key: 'vendor_contact_other', label: 'Other Channel', type: 'text', required: false, placeholder: 'HackerOne handle, phone, etc.' },
       {
         key: 'followup_due_date',
         label: 'Check back in',
