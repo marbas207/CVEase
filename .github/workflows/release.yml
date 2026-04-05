@@ -62,7 +62,11 @@ jobs:
 
       - name: Zip (macOS)
         if: matrix.platform == 'mac'
-        run: cd dist && zip -r -y ${{ matrix.artifact }}.zip mac-unpacked/
+        run: |
+          cd dist
+          ls -la
+          DIR=$(ls -d mac* 2>/dev/null | head -1)
+          zip -r -y ${{ matrix.artifact }}.zip "$DIR"
 
       - name: Zip (Linux)
         if: matrix.platform == 'linux'
