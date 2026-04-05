@@ -26,7 +26,7 @@ function SwimLaneListItem({ lane }: { lane: Swimlane }) {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <p className="text-sm font-semibold">{lane.software_name}</p>
-            <span className="text-xs bg-muted text-muted-foreground px-1.5 py-0.5 rounded">{count} CVE{count !== 1 ? 's' : ''}</span>
+            <span className="text-xs bg-muted text-muted-foreground px-1.5 py-0.5 rounded">{count} vuln{count !== 1 ? 's' : ''}</span>
           </div>
           <p className="text-xs text-muted-foreground">{lane.vendor}</p>
           {lane.url && (
@@ -155,7 +155,7 @@ export function SettingsPage() {
               <Building2 className="w-4 h-4 text-primary" />
               Vendors
             </h3>
-            <p className="text-xs text-muted-foreground">Security team contacts, CNA status, and coordination details. This info pre-fills new CVEs.</p>
+            <p className="text-xs text-muted-foreground">Security team contacts, CNA status, and coordination details. This info pre-fills new vulnerabilities.</p>
           </div>
           <Button size="sm" onClick={() => setAddVendorOpen(true)} className="gap-1">
             <Plus className="w-3.5 h-3.5" />
@@ -240,7 +240,7 @@ export function SettingsPage() {
 
         <div className="mt-3 p-2.5 bg-muted/40 rounded text-xs text-muted-foreground flex items-start gap-2">
           <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5 text-yellow-500/70" />
-          <span>Restoring a backup replaces <strong>all</strong> current data including CVEs, swimlanes, attachments metadata, and activity logs.</span>
+          <span>Restoring a backup replaces <strong>all</strong> current data including vulnerabilities, swimlanes, attachments metadata, and activity logs.</span>
         </div>
       </div>
 

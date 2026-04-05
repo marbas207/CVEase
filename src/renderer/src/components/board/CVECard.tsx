@@ -74,7 +74,7 @@ export function CVECard({ cve, isDragOverlay = false }: Props) {
           {cve.affected_component}{cve.affected_component && cve.affected_versions ? ' · ' : ''}{cve.affected_versions && `v${cve.affected_versions}`}
         </p>
       )}
-      {(cve.escalated_to_vince === 1 || cve.patch_status === 'no_patch' || cve.patch_status === 'wont_fix') && (
+      {(cve.escalated_to_vince === 1 || cve.patch_status === 'no_patch' || cve.patch_status === 'wont_fix' || (cve.bounty_status && cve.bounty_status !== 'none')) && (
         <div className="flex items-center gap-1.5 flex-wrap mb-1">
           {cve.escalated_to_vince === 1 && (
             <span className="text-[10px] font-bold text-orange-400 bg-orange-500/10 rounded px-1 py-0.5">VINCE</span>
@@ -84,6 +84,15 @@ export function CVECard({ cve, isDragOverlay = false }: Props) {
           )}
           {cve.patch_status === 'wont_fix' && (
             <span className="text-[10px] font-bold text-yellow-400 bg-yellow-500/10 rounded px-1 py-0.5">Won't Fix</span>
+          )}
+          {cve.bounty_status === 'paid' && (
+            <span className="text-[10px] font-bold text-green-400 bg-green-500/10 rounded px-1 py-0.5">{cve.bounty_amount ? `$ ${cve.bounty_amount}` : '$ Paid'}</span>
+          )}
+          {cve.bounty_status === 'approved' && (
+            <span className="text-[10px] font-bold text-blue-400 bg-blue-500/10 rounded px-1 py-0.5">$ Approved</span>
+          )}
+          {cve.bounty_status === 'submitted' && (
+            <span className="text-[10px] font-bold text-amber-400 bg-amber-500/10 rounded px-1 py-0.5">$ Pending</span>
           )}
         </div>
       )}

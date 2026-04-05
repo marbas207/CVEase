@@ -18,7 +18,8 @@ import {
   BarChart3,
   ShieldAlert,
   CheckCircle2,
-  Trophy
+  Trophy,
+  DollarSign
 } from 'lucide-react'
 
 // ── Helpers ──────────────────────────────────────────────
@@ -200,6 +201,7 @@ export function DashboardPage() {
     Low: cves.filter(c => c.severity === 'Low').length
   }
 
+  const paidBounties = [...cves, ...archivedCVEs].filter(c => c.bounty_status === 'paid')
   const totalActive = cves.length
   const totalArchived = archivedCVEs.length
   const urgentCount = overdueDeadlines.length + followupsOverdue.length
@@ -215,9 +217,9 @@ export function DashboardPage() {
       </div>
 
       {/* Stats row */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         <StatCard
-          label="Active CVEs"
+          label="Active Vulns"
           value={totalActive}
           icon={<ShieldAlert className="w-5 h-5 text-primary" />}
           color="bg-primary/10"
@@ -239,6 +241,12 @@ export function DashboardPage() {
           value={stageCounts['Published'] + totalArchived}
           icon={<Trophy className="w-5 h-5 text-yellow-400" />}
           color="bg-yellow-500/10"
+        />
+        <StatCard
+          label="Bounties Earned"
+          value={paidBounties.length}
+          icon={<DollarSign className="w-5 h-5 text-green-400" />}
+          color="bg-green-500/10"
         />
       </div>
 
@@ -273,7 +281,7 @@ export function DashboardPage() {
           })}
           {totalActive === 0 && (
             <div className="flex-1 bg-muted flex items-center justify-center">
-              <span className="text-[10px] text-muted-foreground">No active CVEs</span>
+              <span className="text-[10px] text-muted-foreground">No active vulnerabilities</span>
             </div>
           )}
         </div>
@@ -439,7 +447,7 @@ export function DashboardPage() {
             )}
           </h3>
           {staleAwaiting.length === 0 ? (
-            <p className="text-xs text-muted-foreground italic">All active CVEs have follow-up dates set.</p>
+            <p className="text-xs text-muted-foreground italic">All active vulnerabilities have follow-up dates set.</p>
           ) : (
             <div className="space-y-2">
               {staleAwaiting.map(cve => (

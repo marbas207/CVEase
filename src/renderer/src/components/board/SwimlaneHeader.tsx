@@ -41,7 +41,7 @@ export function SwimlaneHeader({ swimlane, onAddCVE, onEdit }: Props) {
         </p>
       </div>
       <div className={cn('flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity no-drag')}>
-        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onAddCVE} title="Add CVE">
+        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onAddCVE} title="Add Vulnerability">
           <Plus className="w-3.5 h-3.5" />
         </Button>
         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onEdit} title="Edit">

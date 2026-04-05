@@ -68,6 +68,12 @@ export function generateLinkedInPost(cve: CVE, swimlane: Swimlane): string {
     lines.push('Happy to answer questions about the disclosure process.')
   }
 
+  // Bounty mention
+  if (cve.bounty_status === 'paid') {
+    lines.push('')
+    lines.push(`This vulnerability was disclosed through the vendor's bug bounty program${cve.bounty_amount ? ` (${cve.bounty_amount})` : ''}.`)
+  }
+
   lines.push(
     '',
     '#CyberSecurity #CVE #VulnerabilityDisclosure #VulnerabilityResearch #BugBounty #SecurityResearch #InfoSec'

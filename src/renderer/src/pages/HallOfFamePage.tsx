@@ -3,7 +3,7 @@ import { useBoardStore } from '../store/boardStore'
 import { SeverityBadge } from '../components/cve/SeverityBadge'
 import { LinkedInPostModal } from '../components/cve/LinkedInPostModal'
 import { formatDate } from '../lib/utils'
-import { Trophy, Linkedin, Calendar, Clock } from 'lucide-react'
+import { Trophy, Linkedin, Calendar, Clock, DollarSign } from 'lucide-react'
 import { Button } from '../components/ui/button'
 import { cn } from '../lib/utils'
 import type { CVE, Swimlane } from '../types/cve'
@@ -78,6 +78,12 @@ function HoFCard({ cve, swimlane }: { cve: CVE; swimlane: Swimlane | undefined }
               {disclosureDays}d from discovery to publish
             </span>
           )}
+          {cve.bounty_status === 'paid' && cve.bounty_amount && (
+            <span className="flex items-center gap-1 text-green-400">
+              <DollarSign className="w-3 h-3" />
+              {cve.bounty_amount}
+            </span>
+          )}
         </div>
 
         {/* Description excerpt */}
@@ -148,7 +154,7 @@ export function HallOfFamePage() {
         <div className="text-center py-20 text-muted-foreground">
           <Trophy className="w-12 h-12 mx-auto mb-4 opacity-20" />
           <p className="text-lg mb-2">Nothing here yet</p>
-          <p className="text-sm">Published CVEs will be archived here after 30 days.</p>
+          <p className="text-sm">Published vulnerabilities will be archived here after 30 days.</p>
         </div>
       )}
 

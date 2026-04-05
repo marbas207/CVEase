@@ -75,7 +75,7 @@ function CollapsibleSection({
         {icon}
         <span className="text-sm font-bold">{label}</span>
         <span className="text-xs text-muted-foreground/50">
-          {count} CVE{count !== 1 ? 's' : ''}
+          {count} vuln{count !== 1 ? 's' : ''}
         </span>
       </button>
       {open && <div className="ml-6">{children}</div>}
@@ -129,8 +129,8 @@ export function TimelinePage() {
 
       {cves.length === 0 && (
         <div className="text-center text-muted-foreground py-20">
-          <p className="text-lg mb-2">No CVEs yet</p>
-          <p className="text-sm">Add a software entry and create CVEs from the Board view.</p>
+          <p className="text-lg mb-2">No vulnerabilities yet</p>
+          <p className="text-sm">Add a software entry and create vulnerabilities from the Board view.</p>
         </div>
       )}
 

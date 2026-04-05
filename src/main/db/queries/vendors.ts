@@ -8,6 +8,8 @@ export interface VendorRow {
   security_contact_email: string | null
   security_contact_other: string | null
   is_cna: number
+  has_bounty_program: number
+  bounty_program_url: string | null
   url: string | null
   notes: string | null
   created_at: string
@@ -20,6 +22,8 @@ export interface CreateVendorInput {
   security_contact_email?: string
   security_contact_other?: string
   is_cna?: boolean
+  has_bounty_program?: boolean
+  bounty_program_url?: string
   url?: string
   notes?: string
 }
@@ -30,6 +34,8 @@ export interface UpdateVendorInput {
   security_contact_email?: string | null
   security_contact_other?: string | null
   is_cna?: boolean
+  has_bounty_program?: boolean
+  bounty_program_url?: string | null
   url?: string | null
   notes?: string | null
 }
@@ -48,8 +54,8 @@ export function createVendor(input: CreateVendorInput): VendorRow {
   const db = getDb()
   const id = uuidv4()
   db.prepare(`
-    INSERT INTO vendors (id, name, security_contact_name, security_contact_email, security_contact_other, is_cna, url, notes)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO vendors (id, name, security_contact_name, security_contact_email, security_contact_other, is_cna, has_bounty_program, bounty_program_url, url, notes)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     id,
     input.name,
@@ -57,6 +63,8 @@ export function createVendor(input: CreateVendorInput): VendorRow {
     input.security_contact_email ?? null,
     input.security_contact_other ?? null,
     input.is_cna ? 1 : 0,
+    input.has_bounty_program ? 1 : 0,
+    input.bounty_program_url ?? null,
     input.url ?? null,
     input.notes ?? null
   )
@@ -73,6 +81,8 @@ export function updateVendor(id: string, input: UpdateVendorInput): VendorRow {
   if ('security_contact_email' in input) { fields.push('security_contact_email = ?'); values.push(input.security_contact_email ?? null) }
   if ('security_contact_other' in input) { fields.push('security_contact_other = ?'); values.push(input.security_contact_other ?? null) }
   if (input.is_cna !== undefined) { fields.push('is_cna = ?'); values.push(input.is_cna ? 1 : 0) }
+  if (input.has_bounty_program !== undefined) { fields.push('has_bounty_program = ?'); values.push(input.has_bounty_program ? 1 : 0) }
+  if ('bounty_program_url' in input) { fields.push('bounty_program_url = ?'); values.push(input.bounty_program_url ?? null) }
   if ('url' in input) { fields.push('url = ?'); values.push(input.url ?? null) }
   if ('notes' in input) { fields.push('notes = ?'); values.push(input.notes ?? null) }
 

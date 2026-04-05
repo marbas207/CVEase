@@ -15,6 +15,8 @@ export async function loadDemoData(): Promise<void> {
     security_contact_email: 'security@acmecorp.example',
     security_contact_other: 'HackerOne: acme-corp',
     is_cna: true,
+    has_bounty_program: true,
+    bounty_program_url: 'https://hackerone.com/acme-corp',
     url: 'https://acmecorp.com',
     notes: 'Generally responsive within 48 hours. Prefers PGP-encrypted emails.'
   })
@@ -129,6 +131,7 @@ export async function loadDemoData(): Promise<void> {
     type: 'Email Received',
     note: 'Vendor confirmed the issue. They plan to patch in their next release cycle (Q1). Proposed 90-day disclosure timeline.'
   })
+  await api.cve.update(idor.id, { bounty_eligible: 1, bounty_status: 'submitted', bounty_url: 'https://hackerone.com/acme-corp/reports/12345' })
   await api.followup.create(idor.id, {
     type: 'Meeting',
     note: 'Had a call with their engineering lead. They understand the severity and are prioritizing the fix.'
@@ -199,7 +202,7 @@ export async function loadDemoData(): Promise<void> {
   await api.cve.move(rce.id, 'Negotiating', globexERP.id, 0)
   await api.cve.move(rce.id, 'CVE Requested', globexERP.id, 0)
   await api.cve.move(rce.id, 'Published', globexERP.id, 0)
-  await api.cve.update(rce.id, { patch_status: 'patch_available', patch_url: 'https://globex.example/advisory/2024-002' })
+  await api.cve.update(rce.id, { patch_status: 'patch_available', patch_url: 'https://globex.example/advisory/2024-002', bounty_eligible: 1, bounty_status: 'paid', bounty_amount: '$2,500', bounty_paid_date: '2024-10-15' })
   const rceTodos = await api.todo.list(rce.id)
   await completeTodo(rceTodos, 'Reproduce & document', 'Full RCE confirmed. Wrote exploit script for verification.')
   await completeTodo(rceTodos, 'CVSS severity', 'CVSS 3.1 Base: 9.8 (Critical). Unauthenticated RCE as service account.')

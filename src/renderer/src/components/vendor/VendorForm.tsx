@@ -29,6 +29,8 @@ export function VendorForm({ open, onOpenChange, vendor }: Props) {
   const [contactEmail, setContactEmail] = useState('')
   const [contactOther, setContactOther] = useState('')
   const [isCna, setIsCna] = useState(false)
+  const [hasBountyProgram, setHasBountyProgram] = useState(false)
+  const [bountyProgramUrl, setBountyProgramUrl] = useState('')
   const [url, setUrl] = useState('')
   const [notes, setNotes] = useState('')
   const [saving, setSaving] = useState(false)
@@ -40,6 +42,8 @@ export function VendorForm({ open, onOpenChange, vendor }: Props) {
       setContactEmail(vendor?.security_contact_email ?? '')
       setContactOther(vendor?.security_contact_other ?? '')
       setIsCna(vendor?.is_cna === 1)
+      setHasBountyProgram(vendor?.has_bounty_program === 1)
+      setBountyProgramUrl(vendor?.bounty_program_url ?? '')
       setUrl(vendor?.url ?? '')
       setNotes(vendor?.notes ?? '')
     }
@@ -56,6 +60,8 @@ export function VendorForm({ open, onOpenChange, vendor }: Props) {
           security_contact_email: contactEmail.trim() || null,
           security_contact_other: contactOther.trim() || null,
           is_cna: isCna,
+          has_bounty_program: hasBountyProgram,
+          bounty_program_url: bountyProgramUrl.trim() || null,
           url: url.trim() || null,
           notes: notes.trim() || null
         })
@@ -66,6 +72,8 @@ export function VendorForm({ open, onOpenChange, vendor }: Props) {
           security_contact_email: contactEmail.trim() || undefined,
           security_contact_other: contactOther.trim() || undefined,
           is_cna: isCna,
+          has_bounty_program: hasBountyProgram,
+          bounty_program_url: bountyProgramUrl.trim() || undefined,
           url: url.trim() || undefined,
           notes: notes.trim() || undefined
         })
@@ -148,6 +156,33 @@ export function VendorForm({ open, onOpenChange, vendor }: Props) {
               <p className="text-[11px] text-muted-foreground">CVE Numbering Authority, can assign CVE IDs directly</p>
             </div>
           </div>
+
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setHasBountyProgram(!hasBountyProgram)}
+              className={`relative w-9 h-5 rounded-full transition-colors ${hasBountyProgram ? 'bg-primary' : 'bg-muted'}`}
+            >
+              <span className={`block w-4 h-4 rounded-full bg-white shadow transition-transform ${hasBountyProgram ? 'translate-x-4' : 'translate-x-0.5'}`} />
+            </button>
+            <div>
+              <Label className="cursor-pointer" onClick={() => setHasBountyProgram(!hasBountyProgram)}>
+                Bug Bounty Program
+              </Label>
+              <p className="text-[11px] text-muted-foreground">Vendor offers a bug bounty or vulnerability rewards program</p>
+            </div>
+          </div>
+          {hasBountyProgram && (
+            <div className="grid gap-1.5">
+              <Label htmlFor="v-bounty-url">Bounty Program URL</Label>
+              <Input
+                id="v-bounty-url"
+                value={bountyProgramUrl}
+                onChange={e => setBountyProgramUrl(e.target.value)}
+                placeholder="https://hackerone.com/vendor"
+              />
+            </div>
+          )}
 
           <div className="grid gap-1.5">
             <Label htmlFor="v-url">Vendor Website</Label>

@@ -10,7 +10,7 @@ import { CVEForm } from './CVEForm'
 import { FollowupActionModal } from './FollowupActionModal'
 import { Separator } from '../ui/separator'
 import { Button } from '../ui/button'
-import { X, Pencil, Trash2, ExternalLink, AlertTriangle, ShieldAlert, Link2, BellRing } from 'lucide-react'
+import { X, Pencil, Trash2, ExternalLink, AlertTriangle, ShieldAlert, Link2, BellRing, DollarSign } from 'lucide-react'
 import { formatDate, daysUntil } from '../../lib/utils'
 
 export function CVEDetailPanel() {
@@ -169,6 +169,40 @@ export function CVEDetailPanel() {
               {cve.patch_url && (
                 <a href={cve.patch_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs text-primary hover:underline">
                   <Link2 className="w-3 h-3" /> Advisory
+                </a>
+              )}
+            </div>
+          )}
+
+          {/* Bounty info */}
+          {(cve.bounty_eligible === 1 || (cve.bounty_status && cve.bounty_status !== 'none')) && (
+            <div className="flex items-center gap-2 flex-wrap">
+              {cve.bounty_status === 'paid' && (
+                <span className="inline-flex items-center gap-1 text-xs font-semibold text-green-400 bg-green-500/10 rounded px-2 py-1">
+                  <DollarSign className="w-3 h-3" /> Bounty Paid {cve.bounty_amount && `(${cve.bounty_amount})`}
+                </span>
+              )}
+              {cve.bounty_status === 'approved' && (
+                <span className="inline-flex items-center gap-1 text-xs font-semibold text-blue-400 bg-blue-500/10 rounded px-2 py-1">
+                  <DollarSign className="w-3 h-3" /> Bounty Approved
+                </span>
+              )}
+              {cve.bounty_status === 'submitted' && (
+                <span className="inline-flex items-center gap-1 text-xs font-semibold text-amber-400 bg-amber-500/10 rounded px-2 py-1">
+                  <DollarSign className="w-3 h-3" /> Bounty Submitted
+                </span>
+              )}
+              {cve.bounty_status === 'rejected' && (
+                <span className="inline-flex items-center gap-1 text-xs font-semibold text-red-400 bg-red-500/10 rounded px-2 py-1">
+                  <DollarSign className="w-3 h-3" /> Bounty Rejected
+                </span>
+              )}
+              {cve.bounty_paid_date && (
+                <span className="text-xs text-muted-foreground">Paid {formatDate(cve.bounty_paid_date)}</span>
+              )}
+              {cve.bounty_url && (
+                <a href={cve.bounty_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs text-primary hover:underline">
+                  <Link2 className="w-3 h-3" /> Report
                 </a>
               )}
             </div>

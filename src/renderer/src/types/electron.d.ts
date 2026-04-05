@@ -61,7 +61,7 @@ interface WindowApi {
   vendor: {
     list(): Promise<IpcResult<Vendor[]>>
     get(id: string): Promise<IpcResult<Vendor | null>>
-    create(data: { name: string; security_contact_name?: string; security_contact_email?: string; security_contact_other?: string; is_cna?: boolean; url?: string; notes?: string }): Promise<IpcResult<Vendor>>
+    create(data: { name: string; security_contact_name?: string; security_contact_email?: string; security_contact_other?: string; is_cna?: boolean; has_bounty_program?: boolean; bounty_program_url?: string; url?: string; notes?: string }): Promise<IpcResult<Vendor>>
     update(id: string, data: Partial<Omit<Vendor, 'id' | 'created_at' | 'updated_at'>>): Promise<IpcResult<Vendor>>
     delete(id: string): Promise<IpcResult<null>>
   }

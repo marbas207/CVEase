@@ -17,6 +17,8 @@ export type Severity = 'Critical' | 'High' | 'Medium' | 'Low'
 
 export type PatchStatus = 'unknown' | 'no_patch' | 'patch_available' | 'wont_fix'
 
+export type BountyStatus = 'none' | 'submitted' | 'approved' | 'paid' | 'rejected'
+
 export interface Vendor {
   id: string
   name: string
@@ -24,6 +26,8 @@ export interface Vendor {
   security_contact_email: string | null
   security_contact_other: string | null
   is_cna: number
+  has_bounty_program: number
+  bounty_program_url: string | null
   url: string | null
   notes: string | null
   created_at: string
@@ -67,6 +71,12 @@ export interface CVE {
   vince_case_id: string | null
   patch_status: PatchStatus
   patch_url: string | null
+  cve_eligible: number | null
+  bounty_eligible: number | null
+  bounty_status: BountyStatus
+  bounty_amount: string | null
+  bounty_paid_date: string | null
+  bounty_url: string | null
   archived: number
   archived_at: string | null
   sort_order: number
@@ -129,6 +139,7 @@ export interface CreateCVEInput {
   date_disclosed?: string
   affected_component?: string
   affected_versions?: string
+  cve_eligible?: number | null
 }
 
 export interface UpdateCVEInput {
@@ -152,6 +163,12 @@ export interface UpdateCVEInput {
   vince_case_id?: string | null
   patch_status?: PatchStatus
   patch_url?: string | null
+  cve_eligible?: number | null
+  bounty_eligible?: number | null
+  bounty_status?: BountyStatus
+  bounty_amount?: string | null
+  bounty_paid_date?: string | null
+  bounty_url?: string | null
 }
 
 export interface CVEFilters {

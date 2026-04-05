@@ -53,7 +53,7 @@ export function TopBar({ title }: Props) {
         <Input
           value={searchQuery}
           onChange={e => setSearch(e.target.value)}
-          placeholder="Search CVEs…"
+          placeholder="Search vulnerabilities..."
           className="pl-8 h-8 text-sm"
         />
         {searchQuery && (

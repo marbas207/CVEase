@@ -34,6 +34,12 @@ export interface CVERow {
   vince_case_id: string | null
   patch_status: string
   patch_url: string | null
+  cve_eligible: number | null
+  bounty_eligible: number | null
+  bounty_status: string
+  bounty_amount: string | null
+  bounty_paid_date: string | null
+  bounty_url: string | null
   archived: number
   archived_at: string | null
   sort_order: number
@@ -58,6 +64,7 @@ export interface CreateCVEInput {
   date_disclosed?: string
   affected_component?: string
   affected_versions?: string
+  cve_eligible?: number | null
 }
 
 export interface UpdateCVEInput {
@@ -80,6 +87,12 @@ export interface UpdateCVEInput {
   vince_case_id?: string | null
   patch_status?: string
   patch_url?: string | null
+  cve_eligible?: number | null
+  bounty_eligible?: number | null
+  bounty_status?: string
+  bounty_amount?: string | null
+  bounty_paid_date?: string | null
+  bounty_url?: string | null
 }
 
 export interface CVEFilters {
@@ -203,6 +216,17 @@ export function createCVE(input: CreateCVEInput): CVERow {
     }
   }
 
+  // Auto-complete CVE request todo if not CVE eligible
+  if (input.cve_eligible === 0) {
+    const cveTodo = db.prepare(
+      "SELECT id FROM todos WHERE cve_id = ? AND text LIKE '%Request CVE ID%' AND completed = 0"
+    ).get(id) as { id: string } | undefined
+    if (cveTodo) {
+      db.prepare("UPDATE todos SET completed = 1, completed_at = datetime('now'), completion_note = ? WHERE id = ?")
+        .run('N/A, not CVE eligible', cveTodo.id)
+    }
+  }
+
   return db.prepare('SELECT * FROM cves WHERE id = ?').get(id) as CVERow
 }
 
@@ -239,6 +263,12 @@ export function updateCVE(id: string, input: UpdateCVEInput): CVERow {
   if ('vince_case_id' in input) setField('vince_case_id', input.vince_case_id ?? null)
   if (input.patch_status !== undefined) setField('patch_status', input.patch_status)
   if ('patch_url' in input) setField('patch_url', input.patch_url ?? null)
+  if ('cve_eligible' in input) setField('cve_eligible', input.cve_eligible)
+  if ('bounty_eligible' in input) setField('bounty_eligible', input.bounty_eligible)
+  if (input.bounty_status !== undefined) setField('bounty_status', input.bounty_status)
+  if ('bounty_amount' in input) setField('bounty_amount', input.bounty_amount ?? null)
+  if ('bounty_paid_date' in input) setField('bounty_paid_date', input.bounty_paid_date ?? null)
+  if ('bounty_url' in input) setField('bounty_url', input.bounty_url ?? null)
 
   fields.push("updated_at = datetime('now')")
   values.push(id)

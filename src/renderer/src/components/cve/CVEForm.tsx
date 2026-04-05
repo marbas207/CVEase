@@ -21,7 +21,7 @@ import {
 import { useBoardStore } from '../../store/boardStore'
 import { calcDeadline } from '../../lib/utils'
 import { STAGES, SEVERITIES, STAGE_ORDER } from '../../lib/constants'
-import type { CVE, Stage, Severity, PatchStatus, CreateCVEInput, UpdateCVEInput } from '../../types/cve'
+import type { CVE, Stage, Severity, PatchStatus, BountyStatus, CreateCVEInput, UpdateCVEInput } from '../../types/cve'
 
 function autoAdvanceStage(
   currentStage: Stage,
@@ -83,6 +83,12 @@ export function CVEForm({ open, onOpenChange, swimlaneId, cve }: Props) {
   const [patchUrl, setPatchUrl] = useState('')
   const [escalatedToVince, setEscalatedToVince] = useState(false)
   const [vinceCaseId, setVinceCaseId] = useState('')
+  const [cveEligible, setCveEligible] = useState<number | null>(1)
+  const [bountyEligible, setBountyEligible] = useState<number | null>(null)
+  const [bountyStatus, setBountyStatus] = useState<BountyStatus>('none')
+  const [bountyAmount, setBountyAmount] = useState('')
+  const [bountyPaidDate, setBountyPaidDate] = useState('')
+  const [bountyUrl, setBountyUrl] = useState('')
   const [saving, setSaving] = useState(false)
 
   // Auto-fill deadline from vendor notified + 90 days if not manually set
@@ -98,6 +104,7 @@ export function CVEForm({ open, onOpenChange, swimlaneId, cve }: Props) {
       setContactName(vendor?.security_contact_name ?? '')
       setContactEmail(vendor?.security_contact_email ?? '')
       setContactOther(vendor?.security_contact_other ?? '')
+      if (vendor?.has_bounty_program === 1) setBountyEligible(1)
     }
   }, [resolvedSwimlaneId]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -125,6 +132,12 @@ export function CVEForm({ open, onOpenChange, swimlaneId, cve }: Props) {
       setPatchUrl(cve?.patch_url ?? '')
       setEscalatedToVince(cve?.escalated_to_vince === 1)
       setVinceCaseId(cve?.vince_case_id ?? '')
+      setCveEligible(cve?.cve_eligible ?? 1)
+      setBountyEligible(cve?.bounty_eligible ?? null)
+      setBountyStatus((cve?.bounty_status as BountyStatus) ?? 'none')
+      setBountyAmount(cve?.bounty_amount ?? '')
+      setBountyPaidDate(cve?.bounty_paid_date ?? '')
+      setBountyUrl(cve?.bounty_url ?? '')
     }
   }, [open, cve])
 
@@ -162,7 +175,13 @@ export function CVEForm({ open, onOpenChange, swimlaneId, cve }: Props) {
           patch_status: patchStatus,
           patch_url: patchUrl.trim() || null,
           escalated_to_vince: escalatedToVince,
-          vince_case_id: vinceCaseId.trim() || null
+          vince_case_id: vinceCaseId.trim() || null,
+          cve_eligible: cveEligible,
+          bounty_eligible: bountyEligible,
+          bounty_status: bountyStatus,
+          bounty_amount: bountyAmount.trim() || null,
+          bounty_paid_date: bountyPaidDate || null,
+          bounty_url: bountyUrl.trim() || null
         }
         await updateCVE(cve.id, data)
       } else {
@@ -182,7 +201,8 @@ export function CVEForm({ open, onOpenChange, swimlaneId, cve }: Props) {
           date_cve_requested: dateCveRequested || undefined,
           date_disclosed: dateDisclosed || undefined,
           affected_component: affectedComponent.trim() || undefined,
-          affected_versions: affectedVersions.trim() || undefined
+          affected_versions: affectedVersions.trim() || undefined,
+          cve_eligible: cveEligible
         }
         await addCVE(data)
       }
@@ -196,9 +216,9 @@ export function CVEForm({ open, onOpenChange, swimlaneId, cve }: Props) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{isEdit ? 'Edit CVE' : 'New CVE'}</DialogTitle>
+          <DialogTitle>{isEdit ? 'Edit Vulnerability' : 'New Vulnerability'}</DialogTitle>
           <DialogDescription>
-            {isEdit ? 'Update the details for this CVE disclosure.' : 'Add a new CVE to track through the disclosure workflow.'}
+            {isEdit ? 'Update the details for this vulnerability.' : 'Add a new vulnerability to track through the disclosure workflow.'}
           </DialogDescription>
         </DialogHeader>
 
@@ -344,6 +364,64 @@ export function CVEForm({ open, onOpenChange, swimlaneId, cve }: Props) {
             </div>
           </div>
 
+          {/* Bug Bounty */}
+          <div>
+            <p className="text-sm font-semibold mb-3">Bug Bounty</p>
+            <div className="grid grid-cols-3 gap-4">
+              <div className="grid gap-1.5">
+                <Label>CVE Eligible</Label>
+                <Select value={String(cveEligible)} onValueChange={v => setCveEligible(v === 'null' ? null : Number(v))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1">Yes</SelectItem>
+                    <SelectItem value="0">No</SelectItem>
+                    <SelectItem value="null">Unknown</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-1.5">
+                <Label>Bounty Eligible</Label>
+                <Select value={String(bountyEligible)} onValueChange={v => setBountyEligible(v === 'null' ? null : Number(v))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="null">Unknown</SelectItem>
+                    <SelectItem value="1">Yes</SelectItem>
+                    <SelectItem value="0">No</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-1.5">
+                <Label>Bounty Status</Label>
+                <Select value={bountyStatus} onValueChange={v => setBountyStatus(v as BountyStatus)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    <SelectItem value="submitted">Submitted</SelectItem>
+                    <SelectItem value="approved">Approved</SelectItem>
+                    <SelectItem value="paid">Paid</SelectItem>
+                    <SelectItem value="rejected">Rejected</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            {bountyStatus !== 'none' && (
+              <div className="grid grid-cols-3 gap-4 mt-3">
+                <div className="grid gap-1.5">
+                  <Label htmlFor="bounty-amount">Amount</Label>
+                  <Input id="bounty-amount" value={bountyAmount} onChange={e => setBountyAmount(e.target.value)} placeholder="$500 USD" />
+                </div>
+                <div className="grid gap-1.5">
+                  <Label htmlFor="bounty-paid-date">Date Paid</Label>
+                  <Input id="bounty-paid-date" type="date" value={bountyPaidDate} onChange={e => setBountyPaidDate(e.target.value)} />
+                </div>
+                <div className="grid gap-1.5">
+                  <Label htmlFor="bounty-url">Report URL</Label>
+                  <Input id="bounty-url" value={bountyUrl} onChange={e => setBountyUrl(e.target.value)} placeholder="https://..." />
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* VINCE escalation */}
           <div>
             <p className="text-sm font-semibold mb-3">Escalation</p>
@@ -407,7 +485,7 @@ export function CVEForm({ open, onOpenChange, swimlaneId, cve }: Props) {
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
           <Button onClick={handleSave} disabled={saving || !title.trim() || (!isEdit && !resolvedSwimlaneId)}>
-            {saving ? 'Saving…' : isEdit ? 'Save Changes' : 'Create CVE'}
+            {saving ? 'Saving...' : isEdit ? 'Save Changes' : 'Create Vulnerability'}
           </Button>
         </DialogFooter>
       </DialogContent>
