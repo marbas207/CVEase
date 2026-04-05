@@ -1,6 +1,6 @@
 import Database from 'better-sqlite3'
 
-const CURRENT_VERSION = 11
+const CURRENT_VERSION = 12
 
 const SCHEMA_V1 = `
 CREATE TABLE IF NOT EXISTS schema_version (
@@ -368,5 +368,10 @@ export function runMigrations(db: Database.Database): void {
     addColumn(db, 'cves', 'bounty_paid_date', 'TEXT')
     addColumn(db, 'cves', 'bounty_url', 'TEXT')
     db.prepare('INSERT INTO schema_version (version) VALUES (?)').run(11)
+  }
+
+  if (currentVersion < 12) {
+    addColumn(db, 'swimlanes', 'bounty_in_scope', 'INTEGER NOT NULL DEFAULT 0')
+    db.prepare('INSERT INTO schema_version (version) VALUES (?)').run(12)
   }
 }

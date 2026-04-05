@@ -46,13 +46,15 @@ export async function loadDemoData(): Promise<void> {
   const acmePortal = await api.swimlane.create({
     software_name: 'Acme Customer Portal',
     vendor: acme.name,
-    vendor_id: acme.id
+    vendor_id: acme.id,
+    bounty_in_scope: true
   })
 
   const acmeApi = await api.swimlane.create({
     software_name: 'Acme REST API',
     vendor: acme.name,
-    vendor_id: acme.id
+    vendor_id: acme.id,
+    bounty_in_scope: true
   })
 
   const globexERP = await api.swimlane.create({
@@ -64,13 +66,15 @@ export async function loadDemoData(): Promise<void> {
   const initechCloud = await api.swimlane.create({
     software_name: 'Initech Cloud Platform',
     vendor: initech.name,
-    vendor_id: initech.id
+    vendor_id: initech.id,
+    bounty_in_scope: true
   })
 
   const initechMobile = await api.swimlane.create({
     software_name: 'Initech Mobile App',
     vendor: initech.name,
-    vendor_id: initech.id
+    vendor_id: initech.id,
+    bounty_in_scope: true
   })
 
   // ── CVEs ──

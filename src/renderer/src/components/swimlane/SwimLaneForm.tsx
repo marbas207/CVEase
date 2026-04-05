@@ -32,13 +32,17 @@ export function SwimLaneForm({ open, onOpenChange, swimlane }: Props) {
   const [softwareName, setSoftwareName] = useState('')
   const [vendorId, setVendorId] = useState('')
   const [url, setUrl] = useState('')
+  const [bountyInScope, setBountyInScope] = useState(false)
   const [saving, setSaving] = useState(false)
+
+  const selectedVendor = vendors.find(v => v.id === vendorId)
 
   useEffect(() => {
     if (open) {
       setSoftwareName(swimlane?.software_name ?? '')
       setVendorId(swimlane?.vendor_id ?? '')
       setUrl(swimlane?.url ?? '')
+      setBountyInScope(swimlane?.bounty_in_scope === 1)
     }
   }, [open, swimlane])
 
@@ -54,7 +58,8 @@ export function SwimLaneForm({ open, onOpenChange, swimlane }: Props) {
           vendor: vendor.name,
           vendor_id: vendorId,
           url: url.trim() || undefined,
-          vendor_is_cna: vendor.is_cna === 1
+          vendor_is_cna: vendor.is_cna === 1,
+          bounty_in_scope: bountyInScope
         })
       } else {
         await addSwimlane({
@@ -62,7 +67,8 @@ export function SwimLaneForm({ open, onOpenChange, swimlane }: Props) {
           vendor: vendor.name,
           vendor_id: vendorId,
           url: url.trim() || undefined,
-          vendor_is_cna: vendor.is_cna === 1
+          vendor_is_cna: vendor.is_cna === 1,
+          bounty_in_scope: bountyInScope
         })
       }
       onOpenChange(false)
@@ -115,6 +121,23 @@ export function SwimLaneForm({ open, onOpenChange, swimlane }: Props) {
               placeholder="https://..."
             />
           </div>
+          {selectedVendor?.has_bounty_program === 1 && (
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setBountyInScope(!bountyInScope)}
+                className={`relative w-9 h-5 rounded-full transition-colors ${bountyInScope ? 'bg-primary' : 'bg-muted'}`}
+              >
+                <span className={`block w-4 h-4 rounded-full bg-white shadow transition-transform ${bountyInScope ? 'translate-x-4' : 'translate-x-0.5'}`} />
+              </button>
+              <div>
+                <Label className="cursor-pointer" onClick={() => setBountyInScope(!bountyInScope)}>
+                  In scope for bug bounty
+                </Label>
+                <p className="text-[11px] text-muted-foreground">This product is eligible for {selectedVendor.name}'s bounty program</p>
+              </div>
+            </div>
+          )}
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>

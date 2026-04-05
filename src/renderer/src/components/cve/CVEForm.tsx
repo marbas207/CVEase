@@ -108,7 +108,10 @@ export function CVEForm({ open, onOpenChange, swimlaneId, cve }: Props) {
       setContactName(vendor?.security_contact_name ?? '')
       setContactEmail(vendor?.security_contact_email ?? '')
       setContactOther(vendor?.security_contact_other ?? '')
-      if (vendor?.has_bounty_program === 1) setBountyEligible(1)
+      const lane = swimlanes.find(s => s.id === resolvedSwimlaneId)
+      if (lane?.bounty_in_scope === 1) setBountyEligible(1)
+      else if (vendor?.has_bounty_program === 1) setBountyEligible(null) // vendor has program but product scope unknown
+      else setBountyEligible(null)
     }
   }, [resolvedSwimlaneId]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -259,6 +262,7 @@ export function CVEForm({ open, onOpenChange, swimlaneId, cve }: Props) {
                       .map(lane => (
                         <SelectItem key={lane.id} value={lane.id}>
                           {lane.software_name}
+                          {lane.bounty_in_scope === 1 && <span className="ml-1 text-[10px] font-bold text-green-500">Bounty</span>}
                         </SelectItem>
                       ))}
                   </SelectContent>

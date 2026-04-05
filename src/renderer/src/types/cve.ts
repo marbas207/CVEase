@@ -42,6 +42,7 @@ export interface Swimlane {
   version_affected: string | null
   url: string | null
   vendor_is_cna: number
+  bounty_in_scope: number
   sort_order: number
   collapsed: number
   created_at: string
