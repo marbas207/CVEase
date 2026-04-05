@@ -2,7 +2,7 @@ import { Bug, Heart, Github, Coffee } from 'lucide-react'
 import { Button } from '../components/ui/button'
 import mascotImg from '@/assets/marbas-mascot.png'
 
-const APP_VERSION = '1.0.0'
+const APP_VERSION = '1.0.1'
 
 export function AboutPage() {
   return (
