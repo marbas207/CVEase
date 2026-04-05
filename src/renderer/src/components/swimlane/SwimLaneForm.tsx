@@ -95,7 +95,7 @@ export function SwimLaneForm({ open, onOpenChange, swimlane }: Props) {
                   {vendors.map(v => (
                     <SelectItem key={v.id} value={v.id}>
                       {v.name}
-                      {v.is_cna === 1 && <span className="ml-1.5 text-[10px] font-bold text-primary">CNA</span>}
+                      {v.is_cna === 1 && <span className="ml-1.5 text-[10px] font-bold text-primary bg-primary/10 rounded px-1 py-0.5">CNA</span>}
                     </SelectItem>
                   ))}
                 </SelectContent>

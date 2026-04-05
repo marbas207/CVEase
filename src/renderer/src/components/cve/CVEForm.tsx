@@ -242,7 +242,8 @@ export function CVEForm({ open, onOpenChange, swimlaneId, cve }: Props) {
                     {vendors.map(v => (
                       <SelectItem key={v.id} value={v.id}>
                         {v.name}
-                        {v.has_bounty_program === 1 && <span className="ml-1 text-[10px] font-bold text-primary">Bounty</span>}
+                        {v.is_cna === 1 && <span className="ml-1 text-[10px] font-bold text-primary bg-primary/10 rounded px-1 py-0.5">CNA</span>}
+                        {v.has_bounty_program === 1 && <span className="ml-1 text-[10px] font-bold text-green-500 bg-green-500/10 rounded px-1 py-0.5">Bounty</span>}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -262,7 +263,7 @@ export function CVEForm({ open, onOpenChange, swimlaneId, cve }: Props) {
                       .map(lane => (
                         <SelectItem key={lane.id} value={lane.id}>
                           {lane.software_name}
-                          {lane.bounty_in_scope === 1 && <span className="ml-1 text-[10px] font-bold text-green-500">Bounty</span>}
+                          {lane.bounty_in_scope === 1 && <span className="ml-1 text-[10px] font-bold text-green-500 bg-green-500/10 rounded px-1 py-0.5">Bounty</span>}
                         </SelectItem>
                       ))}
                   </SelectContent>
