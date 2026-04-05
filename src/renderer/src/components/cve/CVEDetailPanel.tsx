@@ -74,7 +74,7 @@ export function CVEDetailPanel() {
           </div>
 
           {/* Vendor Contact */}
-          {(cve.vendor_contact_name || cve.vendor_contact_email || cve.vendor_contact_other) && (
+          {(cve.vendor_contact_name || cve.vendor_contact_email) && (
             <div>
               <p className="text-sm font-semibold mb-2">Vendor Contact</p>
               <div className="space-y-0.5 text-sm">
@@ -86,9 +86,6 @@ export function CVEDetailPanel() {
                       <ExternalLink className="w-3 h-3" />
                     </a>
                   </p>
-                )}
-                {cve.vendor_contact_other && (
-                  <p className="text-muted-foreground">{cve.vendor_contact_other}</p>
                 )}
               </div>
             </div>

@@ -222,7 +222,7 @@ export function CVEForm({ open, onOpenChange, swimlaneId, cve }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>{isEdit ? 'Edit Vulnerability' : 'New Vulnerability'}</DialogTitle>
           <DialogDescription>
@@ -352,7 +352,7 @@ export function CVEForm({ open, onOpenChange, swimlaneId, cve }: Props) {
             <>
               <div>
                 <p className="text-sm font-semibold mb-3">Vendor Contact</p>
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 gap-4">
                   <div className="grid gap-1.5">
                     <Label htmlFor="contact-name">Name</Label>
                     <Input id="contact-name" value={contactName} onChange={e => setContactName(e.target.value)} placeholder="Security Team" />
@@ -360,10 +360,6 @@ export function CVEForm({ open, onOpenChange, swimlaneId, cve }: Props) {
                   <div className="grid gap-1.5">
                     <Label htmlFor="contact-email">Email</Label>
                     <Input id="contact-email" type="email" value={contactEmail} onChange={e => setContactEmail(e.target.value)} placeholder="security@vendor.com" />
-                  </div>
-                  <div className="grid gap-1.5">
-                    <Label htmlFor="contact-other">Other (HackerOne / etc.)</Label>
-                    <Input id="contact-other" value={contactOther} onChange={e => setContactOther(e.target.value)} placeholder="HackerOne: vendor" />
                   </div>
                 </div>
               </div>

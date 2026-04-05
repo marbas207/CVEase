@@ -129,15 +129,6 @@ export function VendorForm({ open, onOpenChange, vendor }: Props) {
                   placeholder="security@vendor.com"
                 />
               </div>
-              <div className="grid gap-1.5">
-                <Label htmlFor="v-contact-other">Other (HackerOne / Bugcrowd / Phone)</Label>
-                <Input
-                  id="v-contact-other"
-                  value={contactOther}
-                  onChange={e => setContactOther(e.target.value)}
-                  placeholder="HackerOne: vendor-name"
-                />
-              </div>
             </div>
           </div>
 
