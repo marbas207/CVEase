@@ -43,17 +43,15 @@ interface Props {
 }
 
 export function StageTransitionModal({ open, cve, targetStage, onConfirm, onCancel }: Props) {
-  const rawReq = STAGE_REQUIREMENTS[targetStage]
-  // Filter out CVE-specific fields when not CVE eligible
-  const req = rawReq ? {
-    ...rawReq,
-    fields: rawReq.fields.filter(f => {
-      if ((f.key === 'cve_id' || f.key === 'date_cve_requested') && cve.cve_eligible === 0) return false
-      return true
-    })
-  } : undefined
+  const req = STAGE_REQUIREMENTS[targetStage]
   const [fieldValues, setFieldValues] = useState<Record<string, string>>({})
   const [activityNote, setActivityNote] = useState('')
+
+  // Filter out CVE-specific fields when not CVE eligible
+  const visibleFields = (req?.fields ?? []).filter(f => {
+    if ((f.key === 'cve_id' || f.key === 'date_cve_requested') && cve.cve_eligible === 0) return false
+    return true
+  })
 
   const silentConfirm = useCallback(() => {
     if (open && !req) onConfirm({ fieldUpdates: {}, activityNote: '' })
@@ -63,7 +61,7 @@ export function StageTransitionModal({ open, cve, targetStage, onConfirm, onCanc
     if (!req) { silentConfirm(); return }
     if (open) {
       const initial: Record<string, string> = {}
-      for (const f of req.fields) {
+      for (const f of visibleFields) {
         const raw = (cve as Record<string, unknown>)[f.key]
         if (f.type === 'toggle') {
           initial[f.key] = raw === 1 || raw === true ? '1' : ''
@@ -74,17 +72,17 @@ export function StageTransitionModal({ open, cve, targetStage, onConfirm, onCanc
       setFieldValues(initial)
       setActivityNote('')
     }
-  }, [open, cve, req, silentConfirm])
+  }, [open, cve, req, silentConfirm]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!req) return null
 
-  const isValid = req.fields
+  const isValid = visibleFields
     .filter(f => f.required)
     .every(f => (fieldValues[f.key] ?? '').trim().length > 0)
 
   const handleConfirm = () => {
     const fieldUpdates: Partial<CVE> = {}
-    for (const f of req.fields) {
+    for (const f of visibleFields) {
       if (fieldValues[f.key] !== undefined) {
         if (f.type === 'toggle') {
           (fieldUpdates as Record<string, unknown>)[f.key] = fieldValues[f.key] === '1'
@@ -112,7 +110,7 @@ export function StageTransitionModal({ open, cve, targetStage, onConfirm, onCanc
 
         <div className="space-y-4 py-1">
           {/* Required / optional fields */}
-          {req.fields.map(f => (
+          {visibleFields.map(f => (
             <div key={f.key} className="grid gap-1.5">
               <Label htmlFor={`tf-${f.key}`}>
                 {f.label}
