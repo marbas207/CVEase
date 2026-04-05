@@ -45,15 +45,15 @@ jobs:
 
       - name: Package (Windows)
         if: matrix.platform == 'win'
-        run: npx electron-builder --win dir --config.win.signAndEditExecutable=false
+        run: npx electron-builder --win dir --config.win.signAndEditExecutable=false --publish never
 
       - name: Package (macOS)
         if: matrix.platform == 'mac'
-        run: npx electron-builder --mac dmg --config.mac.identity=null
+        run: npx electron-builder --mac dmg --config.mac.identity=null --publish never
 
       - name: Package (Linux)
         if: matrix.platform == 'linux'
-        run: npx electron-builder --linux AppImage
+        run: npx electron-builder --linux AppImage --publish never
 
       - name: Zip (Windows)
         if: matrix.platform == 'win'
