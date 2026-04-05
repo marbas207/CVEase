@@ -23,8 +23,8 @@ export function Sidebar({ currentPage, onNavigate, hofCount = 0, urgentCount = 0
   const { theme, toggle } = useThemeStore()
 
   return (
-    <aside className="w-[72px] bg-sidebar border-r border-sidebar-border flex flex-col items-center py-3 gap-0.5 shrink-0">
-      {/* Branding */}
+    <aside className="w-[72px] bg-sidebar border-r border-sidebar-border flex flex-col items-center pt-8 pb-3 gap-0.5 shrink-0">
+      {/* Branding - extra top padding for macOS traffic lights */}
       <button
         onClick={() => onNavigate('dashboard')}
         className="mb-3 flex flex-col items-center gap-0.5 group"
