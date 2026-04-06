@@ -15,11 +15,16 @@ interface Props {
 export function SwimlaneRow({ swimlane }: Props) {
   const getCVEsForCell = useBoardStore(s => s.getCVEsForCell)
   // Subscribe to filter state so we re-render when filters change
-  useBoardStore(s => s.severityFilter)
-  useBoardStore(s => s.searchQuery)
+  const severityFilter = useBoardStore(s => s.severityFilter)
+  const searchQuery = useBoardStore(s => s.searchQuery)
   const [addCVEOpen, setAddCVEOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
-  const collapsed = swimlane.collapsed === 1
+  const manualCollapsed = swimlane.collapsed === 1
+
+  // Auto-collapse if filters are active and no cards match
+  const hasFilteredCards = STAGES.some(stage => getCVEsForCell(swimlane.id, stage).length > 0)
+  const hasActiveFilter = !!(severityFilter || searchQuery)
+  const collapsed = manualCollapsed || (hasActiveFilter && !hasFilteredCards)
 
   return (
     <div className="group flex border-b border-border">
