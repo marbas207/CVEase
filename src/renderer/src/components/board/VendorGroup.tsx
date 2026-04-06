@@ -27,8 +27,8 @@ export function VendorGroup({ vendor, swimlanes }: Props) {
         {collapsed
           ? <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
           : <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />}
-        <VendorFavicon url={vendorRecord?.url} size={18} />
-        <span className="text-sm font-bold text-foreground">{vendor}</span>
+        <VendorFavicon url={vendorRecord?.url} size={20} />
+        <span className="text-base font-bold text-primary">{vendor}</span>
         {vendorRecord?.is_cna === 1 && (
           <span className="text-[10px] font-bold text-primary bg-primary/10 rounded px-1 py-0.5">CNA</span>
         )}
