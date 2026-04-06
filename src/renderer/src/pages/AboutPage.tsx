@@ -3,7 +3,7 @@ import { Button } from '../components/ui/button'
 import appIcon from '@/assets/app-icon.png'
 import mascotImg from '@/assets/marbas-mascot.png'
 
-const APP_VERSION = '1.1.0'
+const APP_VERSION = '1.2.0'
 
 export function AboutPage() {
   return (
