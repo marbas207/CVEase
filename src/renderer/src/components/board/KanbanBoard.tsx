@@ -44,7 +44,8 @@ export function KanbanBoard() {
     updateCVE,
     optimisticMove,
     saveDragSnapshot,
-    rollbackDrag
+    rollbackDrag,
+    hideEmptyLanes
   } = useBoardStore()
 
   const [addLaneOpen, setAddLaneOpen] = useState(false)
@@ -171,6 +172,8 @@ export function KanbanBoard() {
           <BoardColumnHeader />
           {Array.from(
             swimlanes.reduce((map, lane) => {
+              // When hideEmptyLanes is active, skip lanes with no CVEs
+              if (hideEmptyLanes && !cves.some(c => c.swimlane_id === lane.id)) return map
               const group = map.get(lane.vendor) ?? []
               group.push(lane)
               map.set(lane.vendor, group)

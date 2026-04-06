@@ -14,6 +14,7 @@ interface BoardState {
   activeDragId: string | null
   searchQuery: string
   severityFilter: Severity | null
+  hideEmptyLanes: boolean
   isLoading: boolean
   error: string | null
   collapsedVendors: Set<string>
@@ -37,6 +38,7 @@ interface BoardState {
   setActiveDrag: (id: string | null) => void
   setSearch: (q: string) => void
   setSeverityFilter: (s: Severity | null) => void
+  setHideEmptyLanes: (v: boolean) => void
 
   addSwimlane: (data: { software_name: string; vendor: string; version_affected?: string; url?: string }) => Promise<Swimlane>
   updateSwimlane: (id: string, data: Partial<Pick<Swimlane, 'software_name' | 'vendor' | 'version_affected' | 'url'>>) => Promise<void>
@@ -68,6 +70,7 @@ export const useBoardStore = create<BoardState>((set, get) => ({
   activeDragId: null,
   searchQuery: '',
   severityFilter: null,
+  hideEmptyLanes: false,
   isLoading: false,
   error: null,
   collapsedVendors: new Set<string>(),
@@ -172,6 +175,7 @@ export const useBoardStore = create<BoardState>((set, get) => ({
   setActiveDrag: (id) => set({ activeDragId: id }),
   setSearch: (q) => set({ searchQuery: q }),
   setSeverityFilter: (s) => set({ severityFilter: s }),
+  setHideEmptyLanes: (v) => set({ hideEmptyLanes: v }),
 
   addSwimlane: async (data) => {
     const lane = await api.swimlane.create(data)
