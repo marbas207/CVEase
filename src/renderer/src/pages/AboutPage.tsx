@@ -1,5 +1,6 @@
-import { Bug, Heart, Github, Coffee } from 'lucide-react'
+import { Heart, Github, Coffee } from 'lucide-react'
 import { Button } from '../components/ui/button'
+import appIcon from '@/assets/app-icon.png'
 import mascotImg from '@/assets/marbas-mascot.png'
 
 const APP_VERSION = '1.1.0'
@@ -10,8 +11,8 @@ export function AboutPage() {
       <div className="max-w-md w-full text-center space-y-8">
         {/* Logo + name */}
         <div className="flex flex-col items-center gap-2">
-          <div className="p-3 rounded-xl bg-primary/10">
-            <Bug className="w-12 h-12 text-primary" />
+          <div className="p-2 rounded-xl bg-primary/10">
+            <img src={appIcon} alt="CVEase" className="w-14 h-14 rounded-lg" />
           </div>
           <h1 className="text-3xl font-bold tracking-tight">CVEase</h1>
           <p className="text-sm text-muted-foreground">v{APP_VERSION}</p>

@@ -4,7 +4,8 @@ import { VendorForm } from '../vendor/VendorForm'
 import { SwimLaneForm } from '../swimlane/SwimLaneForm'
 import { CVEForm } from '../cve/CVEForm'
 import { loadDemoData } from '../../lib/demoData'
-import { Bug, ChevronRight, Building2, Package, ShieldAlert, Keyboard, FlaskConical } from 'lucide-react'
+import { ChevronRight, Building2, Package, ShieldAlert, Keyboard, FlaskConical } from 'lucide-react'
+import appIcon from '../../assets/app-icon.png'
 import { Button } from '../ui/button'
 import { cn } from '../../lib/utils'
 
@@ -82,8 +83,8 @@ export function OnboardingGuide() {
         <div className="max-w-lg w-full space-y-8">
           {/* Header */}
           <div className="text-center space-y-3">
-            <div className="inline-flex p-3 rounded-xl bg-primary/10">
-              <Bug className="w-10 h-10 text-primary" />
+            <div className="inline-flex p-2 rounded-xl bg-primary/10">
+              <img src={appIcon} alt="CVEase" className="w-12 h-12 rounded-lg" />
             </div>
             <h1 className="text-2xl font-bold">Welcome to CVEase</h1>
             <p className="text-sm text-muted-foreground leading-relaxed">
