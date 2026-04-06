@@ -146,6 +146,59 @@ export async function loadDemoData(): Promise<void> {
     note: 'Sent disclosure to BD Product Security and notified CISA ICS-CERT given patient safety implications.'
   })
 
+  // 2b. Negotiating + VINCE escalation: Pyxis user enumeration
+  const pyxisEnum = await api.cve.create({
+    swimlane_id: pyxis.id,
+    title: 'Timing-based user enumeration on login endpoint',
+    severity: 'Medium' as Severity,
+    stage: 'Discovery' as Stage,
+    description: '1. Send POST /api/auth/login with a valid username and wrong password\n2. Response takes ~850ms (password hash comparison)\n3. Send POST /api/auth/login with an invalid username\n4. Response takes ~50ms (immediate rejection)\n5. Timing difference allows enumeration of all valid usernames\n6. Combined with default credentials finding, enables targeted attacks',
+    vendor_contact_name: 'BD Product Security',
+    vendor_contact_email: 'productsecurity@bd.com',
+    affected_component: '/api/auth/login',
+    affected_versions: 'ES 1.x - 2.x',
+    date_discovered: '2024-10-05',
+    date_vendor_notified: '2024-10-10'
+  })
+  await api.cve.move(pyxisEnum.id, 'Vendor Contacted', pyxis.id, 0)
+  await api.cve.move(pyxisEnum.id, 'Negotiating', pyxis.id, 0)
+  await api.cve.update(pyxisEnum.id, {
+    escalated_to_vince: true,
+    vince_case_id: 'VU#298437',
+    patch_status: 'wont_fix'
+  })
+  const pyxisEnumTodos = await api.todo.list(pyxisEnum.id)
+  await completeTodo(pyxisEnumTodos, 'Reproduce & document', 'Timing oracle confirmed. Average delta ~800ms between valid/invalid usernames.')
+  await completeTodo(pyxisEnumTodos, 'CVSS severity', 'CVSS 3.1 Base: 5.3 (Medium). Network accessible, no auth required.')
+  await completeTodo(pyxisEnumTodos, 'affected versions', 'All ES 1.x and 2.x firmware. Login endpoint has no rate limiting either.')
+  await completeTodo(pyxisEnumTodos, 'Draft initial disclosure', 'Drafted with timing measurements and enumeration script.')
+  await completeTodo(pyxisEnumTodos, 'Send disclosure', 'Sent to productsecurity@bd.com on Oct 10.')
+  await completeTodo(pyxisEnumTodos, 'Confirm vendor', 'BD acknowledged receipt but disputes severity.')
+  await api.followup.create(pyxisEnum.id, {
+    type: 'Email Sent',
+    note: 'Sent initial disclosure with timing measurements and PoC enumeration script to productsecurity@bd.com.'
+  })
+  await api.followup.create(pyxisEnum.id, {
+    type: 'Email Received',
+    note: 'BD acknowledged receipt. Stated they do not consider timing-based enumeration a vulnerability in their threat model.'
+  })
+  await api.followup.create(pyxisEnum.id, {
+    type: 'Email Sent',
+    note: 'Responded with additional context: combined with default credentials issue, this enables targeted attacks on hospital networks. Requested reconsideration.'
+  })
+  await api.followup.create(pyxisEnum.id, {
+    type: 'Email Received',
+    note: 'BD maintains their position. Marked as "won\'t fix." No further email communication on this issue.'
+  })
+  await api.followup.create(pyxisEnum.id, {
+    type: 'Note',
+    note: 'BD has stopped responding to emails about this issue. Escalating to CERT/CC via VINCE for third-party mediation. Case VU#298437 opened.'
+  })
+  await api.followup.create(pyxisEnum.id, {
+    type: 'Email Sent',
+    note: 'Submitted full case to VINCE (VU#298437) including all correspondence with BD, PoC, and impact analysis for hospital environments.'
+  })
+
   // ══════════════════════════════════════════
   // ── Microsoft Vulnerabilities ──
   // ══════════════════════════════════════════
