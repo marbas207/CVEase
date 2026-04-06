@@ -70,7 +70,7 @@ export const useBoardStore = create<BoardState>((set, get) => ({
   activeDragId: null,
   searchQuery: '',
   severityFilter: null,
-  hideEmptyLanes: false,
+  hideEmptyLanes: true,
   isLoading: false,
   error: null,
   collapsedVendors: new Set<string>(),
