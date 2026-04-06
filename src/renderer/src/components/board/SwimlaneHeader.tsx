@@ -33,15 +33,9 @@ export function SwimlaneHeader({ swimlane, onAddCVE, onEdit }: Props) {
       <VendorFavicon url={vendorRecord?.url} size={14} className="shrink-0 mt-0.5" />
       <div className="flex-1 min-w-0">
         <p className="text-sm font-semibold leading-snug">{swimlane.software_name}</p>
-        <p className="text-xs text-muted-foreground">
-          {swimlane.vendor}
-          {(vendorRecord?.is_cna === 1 || swimlane.vendor_is_cna === 1) && (
-            <span className="ml-1.5 text-[10px] font-bold text-primary bg-primary/10 rounded px-1 py-0.5">CNA</span>
-          )}
-          {swimlane.bounty_in_scope === 1 && (
-            <span className="ml-1.5 text-[10px] font-bold text-green-500 bg-green-500/10 rounded px-1 py-0.5">Bounty</span>
-          )}
-        </p>
+        {swimlane.bounty_in_scope === 1 && (
+          <span className="text-[10px] font-bold text-green-500 bg-green-500/10 rounded px-1 py-0.5">Bounty</span>
+        )}
       </div>
       <div className={cn('flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity no-drag')}>
         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onAddCVE} title="Add Vulnerability">
