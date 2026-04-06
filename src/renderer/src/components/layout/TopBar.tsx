@@ -15,9 +15,10 @@ const SEVERITY_CHIP: Record<Severity, string> = {
 
 interface Props {
   title: string
+  showBoardFilters?: boolean
 }
 
-export function TopBar({ title }: Props) {
+export function TopBar({ title, showBoardFilters = false }: Props) {
   const { searchQuery, setSearch, severityFilter, setSeverityFilter, hideEmptyLanes, setHideEmptyLanes } = useBoardStore()
 
   return (
@@ -47,14 +48,16 @@ export function TopBar({ title }: Props) {
         ))}
       </div>
 
-      {/* View toggle */}
-      <button
-        onClick={() => setHideEmptyLanes(!hideEmptyLanes)}
-        className="no-drag flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border border-border text-muted-foreground hover:border-muted-foreground/50 transition-all"
-      >
-        {hideEmptyLanes ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
-        Showing: {hideEmptyLanes ? 'Active' : 'All'}
-      </button>
+      {/* View toggle (board only) */}
+      {showBoardFilters && (
+        <button
+          onClick={() => setHideEmptyLanes(!hideEmptyLanes)}
+          className="no-drag flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border border-border text-muted-foreground hover:border-muted-foreground/50 transition-all"
+        >
+          {hideEmptyLanes ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+          Showing: {hideEmptyLanes ? 'Active' : 'All'}
+        </button>
+      )}
 
       {/* Search */}
       <div className="relative no-drag w-56">

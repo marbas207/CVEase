@@ -68,7 +68,7 @@ export function App() {
       <Sidebar currentPage={page} onNavigate={setPage} hofCount={archivedCVEs.length} urgentCount={urgentCount} />
 
       <div className="flex-1 flex flex-col overflow-hidden">
-        <TopBar title={PAGE_TITLES[page]} />
+        <TopBar title={PAGE_TITLES[page]} showBoardFilters={page === 'board'} />
         <ArchiveBanner />
         <DemoBanner />
 
