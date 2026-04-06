@@ -22,13 +22,13 @@ export function VendorGroup({ vendor, swimlanes }: Props) {
       {/* Vendor group header */}
       <button
         onClick={() => toggleVendorCollapsed(vendor)}
-        className="flex items-center gap-2.5 w-full px-3 py-2 bg-muted/40 border-b border-border hover:bg-muted/60 transition-colors text-left"
+        className="flex items-center gap-2.5 w-full px-3 py-2 bg-primary/10 border-b border-primary/20 hover:bg-primary/15 transition-colors text-left"
       >
         {collapsed
           ? <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
           : <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />}
-        <VendorFavicon url={vendorRecord?.url} size={20} />
-        <span className="text-base font-bold text-primary">{vendor}</span>
+        <VendorFavicon url={vendorRecord?.url} size={18} />
+        <span className="text-sm font-bold text-foreground">{vendor}</span>
         {vendorRecord?.is_cna === 1 && (
           <span className="text-[10px] font-bold text-primary bg-primary/10 rounded px-1 py-0.5">CNA</span>
         )}
