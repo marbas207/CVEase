@@ -21,9 +21,15 @@ Coordinated vulnerability disclosure is important work, but when you're juggling
 | Platform | Download |
 |----------|----------|
 | Windows | [CVEase-win-Setup.exe](https://github.com/marbas207/CVEase/releases/latest) |
-| macOS (Apple Silicon) | [CVEase-mac-arm64.dmg](https://github.com/marbas207/CVEase/releases/latest) |
-| macOS (Intel) | [CVEase-mac-x64.dmg](https://github.com/marbas207/CVEase/releases/latest) |
+| macOS (Apple Silicon) | [CVEase-mac-arm64.dmg](https://github.com/marbas207/CVEase/releases/latest) * |
+| macOS (Intel) | [CVEase-mac-x64.dmg](https://github.com/marbas207/CVEase/releases/latest) * |
 | Linux | [CVEase-linux.AppImage](https://github.com/marbas207/CVEase/releases/latest) |
+
+**\* macOS users:** The app is not yet notarized. After installing, run this in Terminal to remove the quarantine flag:
+```bash
+xattr -cr /Applications/CVEase.app
+```
+Or right-click the app > Open > click "Open" in the dialog.
 
 ## Features
 
