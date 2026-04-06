@@ -86,7 +86,16 @@ function CollapsibleSection({
 type GroupBy = 'software' | 'stage'
 
 export function TimelinePage() {
-  const { cves, swimlanes, vendors } = useBoardStore()
+  const { cves: allCves, swimlanes, vendors, severityFilter, searchQuery } = useBoardStore()
+
+  const cves = allCves.filter(c => {
+    if (severityFilter && c.severity !== severityFilter) return false
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase()
+      return c.title.toLowerCase().includes(q) || (c.cve_id ?? '').toLowerCase().includes(q) || (c.description ?? '').toLowerCase().includes(q)
+    }
+    return true
+  })
   const [groupBy, setGroupBy] = useState<GroupBy>('software')
 
   const sortedCves = (list: CVE[]) =>

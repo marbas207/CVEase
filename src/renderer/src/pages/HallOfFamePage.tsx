@@ -125,7 +125,16 @@ function HoFCard({ cve, swimlane }: { cve: CVE; swimlane: Swimlane | undefined }
 }
 
 export function HallOfFamePage() {
-  const { archivedCVEs, swimlanes } = useBoardStore()
+  const { archivedCVEs: allArchived, swimlanes, severityFilter, searchQuery } = useBoardStore()
+
+  const archivedCVEs = allArchived.filter(c => {
+    if (severityFilter && c.severity !== severityFilter) return false
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase()
+      return c.title.toLowerCase().includes(q) || (c.cve_id ?? '').toLowerCase().includes(q) || (c.description ?? '').toLowerCase().includes(q)
+    }
+    return true
+  })
 
   const total = archivedCVEs.length
 
