@@ -1,7 +1,6 @@
 import { api } from './ipc'
 import type { Stage, Severity, Todo } from '../types/cve'
 
-// Helper: complete a todo by matching partial text
 async function completeTodo(todos: Todo[], match: string, note: string): Promise<void> {
   const todo = todos.find(t => t.text.toLowerCase().includes(match.toLowerCase()) && !t.completed)
   if (todo) await api.todo.complete(todo.id, { completion_note: note })
@@ -9,374 +8,362 @@ async function completeTodo(todos: Todo[], match: string, note: string): Promise
 
 export async function loadDemoData(): Promise<void> {
   // ── Vendors ──
-  const acme = await api.vendor.create({
-    name: 'Acme Corp',
-    security_contact_name: 'Acme Security Team',
-    security_contact_email: 'security@acmecorp.example',
+
+  const bd = await api.vendor.create({
+    name: 'Becton Dickinson (BD)',
+    security_contact_name: 'BD Product Security',
+    security_contact_email: 'productsecurity@bd.com',
+    is_cna: true,
+    has_bounty_program: false,
+    url: 'https://bd.com',
+    notes: 'BD is a CNA. Coordinated disclosure via productsecurity@bd.com. Typically 90-day timeline. Medical device vendor, CISA ICS-CERT may be involved.'
+  })
+
+  const microsoft = await api.vendor.create({
+    name: 'Microsoft',
+    security_contact_name: 'Microsoft Security Response Center',
+    security_contact_email: 'secure@microsoft.com',
     is_cna: true,
     has_bounty_program: true,
-    bounty_program_url: 'https://hackerone.com/acme-corp',
-    url: 'https://acmecorp.com',
-    notes: 'HackerOne: acme-corp. Generally responsive within 48 hours. Prefers PGP-encrypted emails.'
+    bounty_program_url: 'https://www.microsoft.com/en-us/msrc/bounty',
+    url: 'https://microsoft.com',
+    notes: 'MSRC handles all vulnerability reports. CNA, assigns CVEs directly. Bug bounty covers most products with payouts up to $250K.'
   })
 
-  const globex = await api.vendor.create({
-    name: 'Globex Industries',
-    security_contact_name: 'Hank Scorpio',
-    security_contact_email: 'hank@globex.example',
-    is_cna: false,
-    url: 'https://globex.com',
-    notes: 'Small team, may take a while to respond. No formal bug bounty program.'
-  })
-
-  const initech = await api.vendor.create({
-    name: 'Initech Solutions',
-    security_contact_name: 'Security Operations',
-    security_contact_email: 'security@initech.example',
-    is_cna: false,
+  const google = await api.vendor.create({
+    name: 'Google',
+    security_contact_name: 'Google Vulnerability Reward Program',
+    security_contact_email: 'security@google.com',
+    is_cna: true,
     has_bounty_program: true,
-    bounty_program_url: 'https://bugcrowd.com/initech',
-    url: 'https://initech.com',
-    notes: 'Bugcrowd: initech. Active bounty program, pays within 30 days. Good communication.'
+    bounty_program_url: 'https://bughunters.google.com',
+    url: 'https://google.com',
+    notes: 'Google VRP via bughunters.google.com. CNA, assigns CVEs. Bounties range from $500 to $150K+. Fast triage, usually within 48h.'
   })
 
-  // ── Software / Products ──
-  const acmePortal = await api.swimlane.create({
-    software_name: 'Acme Customer Portal',
-    vendor: acme.name,
-    vendor_id: acme.id,
+  // ── Products ──
+
+  const pyxis = await api.swimlane.create({
+    software_name: 'BD Pyxis MedStation',
+    vendor: bd.name,
+    vendor_id: bd.id
+  })
+
+  const alaris = await api.swimlane.create({
+    software_name: 'BD Alaris Infusion System',
+    vendor: bd.name,
+    vendor_id: bd.id
+  })
+
+  const word = await api.swimlane.create({
+    software_name: 'Microsoft Word',
+    vendor: microsoft.name,
+    vendor_id: microsoft.id,
     bounty_in_scope: true
   })
 
-  const acmeApi = await api.swimlane.create({
-    software_name: 'Acme REST API',
-    vendor: acme.name,
-    vendor_id: acme.id,
+  const excel = await api.swimlane.create({
+    software_name: 'Microsoft Excel',
+    vendor: microsoft.name,
+    vendor_id: microsoft.id,
     bounty_in_scope: true
   })
 
-  const globexERP = await api.swimlane.create({
-    software_name: 'Globex ERP Suite',
-    vendor: globex.name,
-    vendor_id: globex.id
-  })
-
-  const initechCloud = await api.swimlane.create({
-    software_name: 'Initech Cloud Platform',
-    vendor: initech.name,
-    vendor_id: initech.id,
+  const ad = await api.swimlane.create({
+    software_name: 'Active Directory',
+    vendor: microsoft.name,
+    vendor_id: microsoft.id,
     bounty_in_scope: true
   })
 
-  const initechMobile = await api.swimlane.create({
-    software_name: 'Initech Mobile App',
-    vendor: initech.name,
-    vendor_id: initech.id,
+  const gemini = await api.swimlane.create({
+    software_name: 'Google Gemini',
+    vendor: google.name,
+    vendor_id: google.id,
     bounty_in_scope: true
   })
 
-  // ── CVEs ──
-
-  // 1. Discovery stage: just found, early checklist items done
-  const xss = await api.cve.create({
-    swimlane_id: acmePortal.id,
-    title: 'Stored XSS in user profile bio field',
-    severity: 'High' as Severity,
-    stage: 'Discovery' as Stage,
-    description: '1. Navigate to /settings/profile\n2. In the "Bio" field, enter: <img src=x onerror=alert(document.cookie)>\n3. Save profile\n4. Visit any page where the bio is rendered\n5. JavaScript executes in the context of the viewing user',
-    affected_component: '/settings/profile',
-    affected_versions: '3.2.0 - 3.4.1',
-    date_discovered: '2024-11-28'
+  const gmail = await api.swimlane.create({
+    software_name: 'Gmail',
+    vendor: google.name,
+    vendor_id: google.id,
+    bounty_in_scope: true
   })
-  const xssTodos = await api.todo.list(xss.id)
-  await completeTodo(xssTodos, 'Reproduce & document', 'Confirmed on Chrome and Firefox. Cookie exfiltration verified.')
-  await completeTodo(xssTodos, 'CVSS severity', 'CVSS 3.1 Base: 8.1 (High). Stored XSS with session hijack potential.')
-  await completeTodo(xssTodos, 'affected versions', 'Tested 3.2.0, 3.3.0, 3.4.1. All vulnerable. 3.1.x not affected.')
 
-  // 2. Vendor Contacted: disclosure sent, waiting for response
-  const sqlInjection = await api.cve.create({
-    swimlane_id: acmeApi.id,
-    title: 'SQL Injection in /api/v2/users search endpoint',
+  const gcp = await api.swimlane.create({
+    software_name: 'Google Cloud Platform',
+    vendor: google.name,
+    vendor_id: google.id,
+    bounty_in_scope: true
+  })
+
+  // ══════════════════════════════════════════
+  // ── BD Vulnerabilities ──
+  // ══════════════════════════════════════════
+
+  // 1. Discovery: BD Pyxis credential issue
+  const pyxisCreds = await api.cve.create({
+    swimlane_id: pyxis.id,
+    title: 'Default credentials on Pyxis management console',
     severity: 'Critical' as Severity,
     stage: 'Discovery' as Stage,
-    description: '1. Send GET request to /api/v2/users?search=test\' OR 1=1--\n2. Response returns all user records\n3. UNION-based extraction confirmed: /api/v2/users?search=test\' UNION SELECT username,password FROM admin--',
-    vendor_contact_name: 'Acme Security Team',
-    vendor_contact_email: 'security@acmecorp.example',
-    affected_component: '/api/v2/users',
-    affected_versions: '2.0.0+',
-    date_discovered: '2024-11-15',
-    date_vendor_notified: '2024-11-18'
+    description: '1. Connect to Pyxis MedStation management interface on port 443\n2. Login with admin/admin (default credentials)\n3. Full administrative access to medication dispensing configuration\n4. Can modify drug libraries, user permissions, and audit logs',
+    affected_component: 'Management Console (port 443)',
+    affected_versions: 'ES 1.x - 2.3',
+    date_discovered: '2024-12-01'
   })
-  await api.cve.move(sqlInjection.id, 'Vendor Contacted', acmeApi.id, 0)
-  const followupDate = new Date()
-  followupDate.setDate(followupDate.getDate() + 5)
-  await api.cve.update(sqlInjection.id, {
-    followup_due_date: followupDate.toISOString().slice(0, 10)
-  })
-  const sqliTodos = await api.todo.list(sqlInjection.id)
-  await completeTodo(sqliTodos, 'Reproduce & document', 'Full SQLi confirmed. UNION-based extraction of admin credentials possible.')
-  await completeTodo(sqliTodos, 'CVSS severity', 'CVSS 3.1 Base: 9.8 (Critical). Unauthenticated, full DB access.')
-  await completeTodo(sqliTodos, 'affected versions', 'All v2.x endpoints affected. v1.x uses different ORM, not vulnerable.')
-  await completeTodo(sqliTodos, 'Draft initial disclosure', 'Drafted email with PoC, impact analysis, and suggested remediation (parameterized queries).')
-  await completeTodo(sqliTodos, 'Send disclosure', 'Sent to security@acmecorp.example on Nov 18. PGP encrypted per their preference.')
-  await api.followup.create(sqlInjection.id, {
-    type: 'Email Sent',
-    note: 'Sent initial disclosure with PoC and impact analysis. Included suggested fix (parameterized queries).'
-  })
+  const pyxisTodos = await api.todo.list(pyxisCreds.id)
+  await completeTodo(pyxisTodos, 'Reproduce & document', 'Confirmed default admin/admin on two separate Pyxis units in lab environment.')
+  await completeTodo(pyxisTodos, 'CVSS severity', 'CVSS 3.1 Base: 9.8 (Critical). Network-accessible, no auth required.')
+  await completeTodo(pyxisTodos, 'affected versions', 'Confirmed on ES 1.6 and 2.1. Vendor docs suggest all 1.x-2.3 affected.')
 
-  // 3. Negotiating: vendor responded, working on timeline
-  const idor = await api.cve.create({
-    swimlane_id: acmePortal.id,
-    title: 'IDOR allows accessing other users\' invoices',
-    severity: 'High' as Severity,
-    stage: 'Discovery' as Stage,
-    description: '1. Login as user A\n2. Navigate to /invoices/12345\n3. Change ID to /invoices/12346 (belongs to user B)\n4. Invoice data for user B is returned\n\nNo authorization check on the invoice endpoint.',
-    vendor_contact_name: 'Acme Security Team',
-    vendor_contact_email: 'security@acmecorp.example',
-    affected_component: '/invoices/:id',
-    affected_versions: '3.0.0+',
-    date_discovered: '2024-10-20',
-    date_vendor_notified: '2024-10-25'
-  })
-  await api.cve.move(idor.id, 'Vendor Contacted', acmePortal.id, 0)
-  await api.cve.move(idor.id, 'Negotiating', acmePortal.id, 0)
-  const idorTodos = await api.todo.list(idor.id)
-  await completeTodo(idorTodos, 'Reproduce & document', 'Confirmed across multiple account pairs. All invoice endpoints affected.')
-  await completeTodo(idorTodos, 'CVSS severity', 'CVSS 3.1 Base: 7.5 (High). Any authenticated user can access any invoice.')
-  await completeTodo(idorTodos, 'affected versions', 'All v3.x versions. Authorization was removed during v3.0 refactor.')
-  await completeTodo(idorTodos, 'Draft initial disclosure', 'Drafted with full PoC showing cross-account access to PII.')
-  await completeTodo(idorTodos, 'Send disclosure', 'Sent via HackerOne on Oct 25.')
-  await completeTodo(idorTodos, 'Confirm vendor', 'Vendor acknowledged via HackerOne on Oct 28.')
-  await completeTodo(idorTodos, 'Agree on disclosure', 'Agreed on 90-day timeline. Vendor targeting Q1 patch release.')
-  // Intentionally no followup_due_date set on this one, so it shows in "No Follow-up Set" on the dashboard
-  await api.followup.create(idor.id, {
-    type: 'Email Sent',
-    note: 'Sent initial disclosure with full reproduction steps and impact analysis.'
-  })
-  await api.followup.create(idor.id, {
-    type: 'Email Received',
-    note: 'Vendor confirmed the issue. They plan to patch in their next release cycle (Q1). Proposed 90-day disclosure timeline.'
-  })
-  await api.cve.update(idor.id, { bounty_eligible: 1, bounty_status: 'submitted', bounty_url: 'https://hackerone.com/acme-corp/reports/12345' })
-  await api.followup.create(idor.id, {
-    type: 'Meeting',
-    note: 'Had a call with their engineering lead. They understand the severity and are prioritizing the fix.'
-  })
-
-  // 4. CVE Requested: deep into the process
-  const authBypass = await api.cve.create({
-    swimlane_id: globexERP.id,
-    title: 'Authentication bypass via crafted JWT token',
+  // 2. Vendor Contacted: BD Alaris buffer overflow
+  const alarisOverflow = await api.cve.create({
+    swimlane_id: alaris.id,
+    title: 'Buffer overflow in network stack allows remote code execution',
     severity: 'Critical' as Severity,
     stage: 'Discovery' as Stage,
-    description: '1. Capture a valid JWT from /auth/login\n2. Modify the "alg" header to "none"\n3. Remove the signature\n4. Send the modified token in Authorization header\n5. Server accepts the token and grants admin access',
-    vendor_contact_name: 'Hank Scorpio',
-    vendor_contact_email: 'hank@globex.example',
-    affected_component: 'Authentication middleware',
-    affected_versions: '< 5.0',
-    date_discovered: '2024-09-10',
-    date_vendor_notified: '2024-09-15',
-    date_cve_requested: '2024-10-01'
+    description: '1. Send a crafted DHCP response with oversized option field\n2. Buffer overflow triggered in network initialization\n3. Achieve code execution as root on the infusion pump controller\n4. Can modify infusion rates and drug concentrations',
+    vendor_contact_name: 'BD Product Security',
+    vendor_contact_email: 'productsecurity@bd.com',
+    affected_component: 'Network stack / DHCP client',
+    affected_versions: '< 12.1.2',
+    date_discovered: '2024-11-10',
+    date_vendor_notified: '2024-11-15'
   })
-  await api.cve.move(authBypass.id, 'Vendor Contacted', globexERP.id, 0)
-  await api.cve.move(authBypass.id, 'Negotiating', globexERP.id, 0)
-  await api.cve.move(authBypass.id, 'CVE Requested', globexERP.id, 0)
-  await api.cve.update(authBypass.id, { patch_status: 'patch_available', patch_url: 'https://globex.example/advisory/2024-001' })
-  const cveFuDate = new Date()
-  cveFuDate.setDate(cveFuDate.getDate() + 10)
-  await api.cve.update(authBypass.id, { followup_due_date: cveFuDate.toISOString().slice(0, 10) })
-  const authTodos = await api.todo.list(authBypass.id)
-  await completeTodo(authTodos, 'Reproduce & document', 'Reproduced with curl. Works on all endpoints. Full admin access achieved.')
-  await completeTodo(authTodos, 'CVSS severity', 'CVSS 3.1 Base: 9.8 (Critical). Complete authentication bypass.')
-  await completeTodo(authTodos, 'affected versions', 'All versions prior to 5.0. The JWT library upgrade in 5.0 rejects alg:none.')
-  await completeTodo(authTodos, 'Draft initial disclosure', 'Drafted with PoC script that generates a valid admin token.')
-  await completeTodo(authTodos, 'Send disclosure', 'Sent to hank@globex.example on Sep 15.')
-  await completeTodo(authTodos, 'Confirm vendor', 'Hank confirmed on Sep 18. Said he was "horrified but grateful."')
-  await completeTodo(authTodos, 'Agree on disclosure', 'Agreed on 90-day timeline. Patch released in v5.0.1 on Oct 20.')
-  await completeTodo(authTodos, 'Request CVE', 'Submitted to MITRE on Oct 1. Vendor is not a CNA.')
-  await api.followup.create(authBypass.id, {
+  await api.cve.move(alarisOverflow.id, 'Vendor Contacted', alaris.id, 0)
+  const alarisfu = new Date()
+  alarisfu.setDate(alarisfu.getDate() + 3)
+  await api.cve.update(alarisOverflow.id, { followup_due_date: alarisfu.toISOString().slice(0, 10) })
+  const alarisTodos = await api.todo.list(alarisOverflow.id)
+  await completeTodo(alarisTodos, 'Reproduce & document', 'PoC exploit developed. Achieves root shell on pump controller.')
+  await completeTodo(alarisTodos, 'CVSS severity', 'CVSS 3.1 Base: 9.8. Network adjacent, no auth, full compromise of medical device.')
+  await completeTodo(alarisTodos, 'affected versions', 'All firmware versions prior to 12.1.2.')
+  await completeTodo(alarisTodos, 'Draft initial disclosure', 'Drafted with full PoC. Added CISA ICS-CERT notification plan.')
+  await completeTodo(alarisTodos, 'Send disclosure', 'Sent to productsecurity@bd.com on Nov 15. CC\'d CISA.')
+  await api.followup.create(alarisOverflow.id, {
     type: 'Email Sent',
-    note: 'Initial disclosure with PoC and impact assessment.'
-  })
-  await api.followup.create(authBypass.id, {
-    type: 'Email Received',
-    note: 'Hank confirmed the issue. Patch being developed for v5.0.1.'
-  })
-  await api.followup.create(authBypass.id, {
-    type: 'Note',
-    note: 'Patch released in v5.0.1. Verified the fix works. Waiting on CVE assignment from MITRE.'
+    note: 'Sent disclosure to BD Product Security and notified CISA ICS-CERT given patient safety implications.'
   })
 
-  // 5. Published: complete lifecycle, all todos done
-  const rce = await api.cve.create({
-    swimlane_id: globexERP.id,
-    title: 'Remote code execution via file upload',
-    severity: 'Critical' as Severity,
-    stage: 'Discovery' as Stage,
-    cve_id: 'CVE-2024-55123',
-    description: '1. Navigate to /admin/import\n2. Upload a .jsp file renamed to .xlsx\n3. Server executes the JSP payload\n4. Full RCE achieved with application service account privileges',
-    vendor_contact_name: 'Hank Scorpio',
-    vendor_contact_email: 'hank@globex.example',
-    affected_component: '/admin/import',
-    affected_versions: '4.2.0 - 4.9.x',
-    date_discovered: '2024-07-01',
-    date_vendor_notified: '2024-07-05',
-    date_cve_requested: '2024-08-01',
-    date_disclosed: '2024-10-03'
-  })
-  await api.cve.move(rce.id, 'Vendor Contacted', globexERP.id, 0)
-  await api.cve.move(rce.id, 'Negotiating', globexERP.id, 0)
-  await api.cve.move(rce.id, 'CVE Requested', globexERP.id, 0)
-  await api.cve.move(rce.id, 'Published', globexERP.id, 0)
-  await api.cve.update(rce.id, { patch_status: 'patch_available', patch_url: 'https://globex.example/advisory/2024-002', bounty_eligible: 1, bounty_status: 'paid', bounty_amount: '$2,500', bounty_paid_date: '2024-10-15' })
-  const rceTodos = await api.todo.list(rce.id)
-  await completeTodo(rceTodos, 'Reproduce & document', 'Full RCE confirmed. Wrote exploit script for verification.')
-  await completeTodo(rceTodos, 'CVSS severity', 'CVSS 3.1 Base: 9.8 (Critical). Unauthenticated RCE as service account.')
-  await completeTodo(rceTodos, 'affected versions', 'Versions 4.2.0 through 4.9.x. Fixed in 5.0.0.')
-  await completeTodo(rceTodos, 'Draft initial disclosure', 'Full writeup with timeline, PoC, and vendor coordination notes.')
-  await completeTodo(rceTodos, 'Send disclosure', 'Sent to Hank on Jul 5 with PGP encryption.')
-  await completeTodo(rceTodos, 'Confirm vendor', 'Hank confirmed Jul 7. Escalated internally as P0.')
-  await completeTodo(rceTodos, 'Agree on disclosure', '90-day timeline agreed. Vendor fast-tracked the fix.')
-  await completeTodo(rceTodos, 'Request CVE', 'Submitted to MITRE Aug 1. Assigned CVE-2024-55123 on Aug 15.')
-  await completeTodo(rceTodos, 'Coordinate and finalize', 'Coordinated advisory with Globex. Published simultaneously.')
-  await completeTodo(rceTodos, 'Publish vulnerability', 'Published Oct 3. Advisory live at globex.example/advisory/2024-002.')
-  await api.followup.create(rce.id, { type: 'Email Sent', note: 'Initial disclosure with full PoC.' })
-  await api.followup.create(rce.id, { type: 'Email Received', note: 'Vendor confirmed. Treating as P0.' })
-  await api.followup.create(rce.id, { type: 'Phone Call', note: 'Call with Hank to discuss timeline. Agreed on 90-day window.' })
-  await api.followup.create(rce.id, { type: 'Email Received', note: 'Patch released in v5.0.0. Asked us to verify.' })
-  await api.followup.create(rce.id, { type: 'Note', note: 'Verified fix. Upload now validates file type server-side.' })
-  await api.followup.create(rce.id, { type: 'Note', note: 'CVE-2024-55123 assigned. Published advisory and blog post.' })
+  // ══════════════════════════════════════════
+  // ── Microsoft Vulnerabilities ──
+  // ══════════════════════════════════════════
 
-  // ── Initech CVEs ──
-
-  // 6. Bounty-only (no CVE): SSRF in cloud platform, paid $1,000
-  const ssrf = await api.cve.create({
-    swimlane_id: initechCloud.id,
-    title: 'SSRF via webhook URL parameter',
+  // 3. Negotiating: Word macro bypass
+  const wordMacro = await api.cve.create({
+    swimlane_id: word.id,
+    title: 'Macro security bypass via crafted document properties',
     severity: 'High' as Severity,
     stage: 'Discovery' as Stage,
-    description: '1. Create a webhook integration\n2. Set callback URL to http://169.254.169.254/latest/meta-data/\n3. Server fetches the URL server-side\n4. AWS metadata returned in webhook test response\n5. Can extract IAM credentials from instance metadata',
-    vendor_contact_name: 'Security Operations',
-    vendor_contact_email: 'security@initech.example',
-    affected_component: 'Webhook integrations',
-    affected_versions: 'All versions',
-    date_discovered: '2024-11-01',
-    date_vendor_notified: '2024-11-05',
-    date_disclosed: '2024-12-20',
-    cve_eligible: 0
+    description: '1. Create a .docm file with embedded macro\n2. Set custom document property "AutoOpen" with special characters\n3. Macro executes without showing the security warning bar\n4. Bypasses Protected View and macro security settings',
+    vendor_contact_name: 'MSRC',
+    vendor_contact_email: 'secure@microsoft.com',
+    affected_component: 'Macro engine / Protected View',
+    affected_versions: 'Office 2019, 2021, 365 (Build < 16.0.17328)',
+    date_discovered: '2024-10-01',
+    date_vendor_notified: '2024-10-05'
   })
-  await api.cve.move(ssrf.id, 'Vendor Contacted', initechCloud.id, 0)
-  await api.cve.move(ssrf.id, 'Negotiating', initechCloud.id, 0)
-  await api.cve.move(ssrf.id, 'Published', initechCloud.id, 0)
-  await api.cve.update(ssrf.id, {
+  await api.cve.move(wordMacro.id, 'Vendor Contacted', word.id, 0)
+  await api.cve.move(wordMacro.id, 'Negotiating', word.id, 0)
+  const wordTodos = await api.todo.list(wordMacro.id)
+  await completeTodo(wordTodos, 'Reproduce & document', 'Confirmed bypass on Word 365 and 2021. Protected View completely bypassed.')
+  await completeTodo(wordTodos, 'CVSS severity', 'CVSS 3.1 Base: 8.1 (High). User interaction required but no warning shown.')
+  await completeTodo(wordTodos, 'affected versions', 'Office 2019, 2021, and 365 prior to January 2025 update.')
+  await completeTodo(wordTodos, 'Draft initial disclosure', 'Submitted through MSRC portal with PoC document.')
+  await completeTodo(wordTodos, 'Send disclosure', 'Submitted via MSRC researcher portal on Oct 5.')
+  await completeTodo(wordTodos, 'Confirm vendor', 'MSRC confirmed and assigned case number. Reproducing internally.')
+  await completeTodo(wordTodos, 'Agree on disclosure', 'Agreed on 90-day timeline. MSRC targeting January Patch Tuesday.')
+  await api.cve.update(wordMacro.id, { bounty_eligible: 1 })
+  const wordFu = new Date()
+  wordFu.setDate(wordFu.getDate() + 14)
+  await api.cve.update(wordMacro.id, { followup_due_date: wordFu.toISOString().slice(0, 10) })
+  await api.followup.create(wordMacro.id, { type: 'Email Sent', note: 'Submitted via MSRC portal with PoC .docm file.' })
+  await api.followup.create(wordMacro.id, { type: 'Email Received', note: 'MSRC confirmed the issue. Assigned case VULN-087234. Targeting Patch Tuesday.' })
+  await api.followup.create(wordMacro.id, { type: 'Meeting', note: 'Call with MSRC engineer to discuss technical details and attack surface.' })
+
+  // 4. CVE Requested: AD privilege escalation
+  const adPrivEsc = await api.cve.create({
+    swimlane_id: ad.id,
+    title: 'Privilege escalation via Kerberos delegation abuse',
+    severity: 'Critical' as Severity,
+    stage: 'Discovery' as Stage,
+    description: '1. Compromise any domain user account\n2. Identify services with unconstrained delegation\n3. Coerce authentication from a DC using PrinterBug/PetitPotam\n4. Capture and relay the TGT to escalate to Domain Admin',
+    vendor_contact_name: 'MSRC',
+    vendor_contact_email: 'secure@microsoft.com',
+    affected_component: 'Kerberos / Active Directory delegation',
+    affected_versions: 'Windows Server 2016-2025',
+    date_discovered: '2024-08-15',
+    date_vendor_notified: '2024-08-20',
+    date_cve_requested: '2024-09-25'
+  })
+  await api.cve.move(adPrivEsc.id, 'Vendor Contacted', ad.id, 0)
+  await api.cve.move(adPrivEsc.id, 'Negotiating', ad.id, 0)
+  await api.cve.move(adPrivEsc.id, 'CVE Requested', ad.id, 0)
+  await api.cve.update(adPrivEsc.id, { patch_status: 'patch_available', bounty_eligible: 1, bounty_status: 'approved', bounty_amount: '$15,000' })
+  const adFu = new Date()
+  adFu.setDate(adFu.getDate() + 7)
+  await api.cve.update(adPrivEsc.id, { followup_due_date: adFu.toISOString().slice(0, 10) })
+  const adTodos = await api.todo.list(adPrivEsc.id)
+  await completeTodo(adTodos, 'Reproduce & document', 'Full exploit chain demonstrated in lab AD environment. Domain Admin in 3 steps.')
+  await completeTodo(adTodos, 'CVSS severity', 'CVSS 3.1 Base: 9.1 (Critical). Any domain user to Domain Admin.')
+  await completeTodo(adTodos, 'affected versions', 'All Windows Server versions with AD DS role. 2016 through 2025.')
+  await completeTodo(adTodos, 'Draft initial disclosure', 'Detailed writeup with exploit chain, impact analysis, and remediation guidance.')
+  await completeTodo(adTodos, 'Send disclosure', 'Submitted via MSRC portal on Aug 20.')
+  await completeTodo(adTodos, 'Confirm vendor', 'MSRC confirmed. Rated as Critical internally.')
+  await completeTodo(adTodos, 'Agree on disclosure', '90-day timeline. Patch developed, awaiting release.')
+  await completeTodo(adTodos, 'Request CVE', 'MSRC assigned CVE directly as CNA. Awaiting public CVE ID.')
+  await api.followup.create(adPrivEsc.id, { type: 'Email Sent', note: 'Submitted full exploit chain via MSRC portal.' })
+  await api.followup.create(adPrivEsc.id, { type: 'Email Received', note: 'MSRC confirmed Critical severity. Bounty approved at $15,000.' })
+  await api.followup.create(adPrivEsc.id, { type: 'Note', note: 'Patch developed. Waiting on next Patch Tuesday for release.' })
+
+  // 5. Published: Excel formula injection (bounty paid)
+  const excelFormulaInj = await api.cve.create({
+    swimlane_id: excel.id,
+    title: 'Formula injection via CSV import leads to RCE',
+    severity: 'High' as Severity,
+    stage: 'Discovery' as Stage,
+    cve_id: 'CVE-2024-49112',
+    description: '1. Create a CSV with payload: =CMD|"/C calc.exe"!A0\n2. User opens CSV in Excel\n3. Excel prompts "Enable content" without clear security context\n4. Payload executes arbitrary commands as the user',
+    vendor_contact_name: 'MSRC',
+    vendor_contact_email: 'secure@microsoft.com',
+    affected_component: 'CSV import / DDE',
+    affected_versions: 'Excel 2019, 2021, 365',
+    date_discovered: '2024-05-10',
+    date_vendor_notified: '2024-05-15',
+    date_cve_requested: '2024-06-20',
+    date_disclosed: '2024-09-10'
+  })
+  await api.cve.move(excelFormulaInj.id, 'Vendor Contacted', excel.id, 0)
+  await api.cve.move(excelFormulaInj.id, 'Negotiating', excel.id, 0)
+  await api.cve.move(excelFormulaInj.id, 'CVE Requested', excel.id, 0)
+  await api.cve.move(excelFormulaInj.id, 'Published', excel.id, 0)
+  await api.cve.update(excelFormulaInj.id, {
     patch_status: 'patch_available',
     bounty_eligible: 1,
     bounty_status: 'paid',
-    bounty_amount: '$1,000',
-    bounty_paid_date: '2024-12-28',
-    bounty_url: 'https://bugcrowd.com/initech/reports/98765'
+    bounty_amount: '$5,000',
+    bounty_paid_date: '2024-09-25'
   })
-  const ssrfTodos = await api.todo.list(ssrf.id)
-  await completeTodo(ssrfTodos, 'Reproduce & document', 'Confirmed SSRF. Can reach internal services and AWS metadata endpoint.')
-  await completeTodo(ssrfTodos, 'CVSS severity', 'CVSS 3.1 Base: 7.5 (High). Server-side request forgery with cloud metadata access.')
-  await completeTodo(ssrfTodos, 'affected versions', 'All versions of the webhook integration feature.')
-  await completeTodo(ssrfTodos, 'Draft initial disclosure', 'Submitted via Bugcrowd with full PoC.')
-  await completeTodo(ssrfTodos, 'Send disclosure', 'Submitted through Bugcrowd on Nov 5.')
-  await completeTodo(ssrfTodos, 'Confirm vendor', 'Triaged within 24 hours. Marked as P1.')
-  await completeTodo(ssrfTodos, 'Coordinate and finalize', 'Vendor patched and we coordinated disclosure.')
-  await completeTodo(ssrfTodos, 'Publish vulnerability', 'Published on Bugcrowd. No CVE needed per vendor.')
-  await api.followup.create(ssrf.id, { type: 'Note', note: 'Submitted via Bugcrowd. Triaged as P1 within 24h.' })
-  await api.followup.create(ssrf.id, { type: 'Email Received', note: 'Bounty approved at $1,000. Payment processing.' })
-  await api.followup.create(ssrf.id, { type: 'Note', note: 'Bounty paid. No CVE requested per vendor preference.' })
-  await api.cve.archive(ssrf.id)
+  const excelTodos = await api.todo.list(excelFormulaInj.id)
+  for (const t of excelTodos) await api.todo.complete(t.id, { completion_note: 'Completed during disclosure.' })
+  await api.followup.create(excelFormulaInj.id, { type: 'Email Sent', note: 'Submitted via MSRC with PoC CSV file.' })
+  await api.followup.create(excelFormulaInj.id, { type: 'Email Received', note: 'MSRC confirmed. Patch in development.' })
+  await api.followup.create(excelFormulaInj.id, { type: 'Note', note: 'CVE-2024-49112 assigned. Published in September Patch Tuesday.' })
 
-  // 7. Initech Mobile: open finding, bounty submitted
-  const mobileLeak = await api.cve.create({
-    swimlane_id: initechMobile.id,
-    title: 'API keys leaked in mobile app binary',
+  // ══════════════════════════════════════════
+  // ── Google Vulnerabilities ──
+  // ══════════════════════════════════════════
+
+  // 6. Negotiating: Gemini prompt injection (no follow-up set)
+  const geminiPromptInj = await api.cve.create({
+    swimlane_id: gemini.id,
+    title: 'Indirect prompt injection via embedded document content',
     severity: 'Medium' as Severity,
     stage: 'Discovery' as Stage,
-    description: '1. Decompile the Android APK using jadx\n2. Search for string "api_key" or "secret"\n3. Production API keys found hardcoded in BuildConfig class\n4. Keys grant access to internal APIs without authentication',
-    vendor_contact_name: 'Security Operations',
-    vendor_contact_email: 'security@initech.example',
-    affected_component: 'Android APK / BuildConfig',
-    affected_versions: '4.0.0 - 4.3.2',
-    date_discovered: '2024-12-10',
-    date_vendor_notified: '2024-12-12',
+    description: '1. Upload a PDF containing hidden instructions in white text\n2. Ask Gemini to "summarize this document"\n3. Gemini follows the hidden instructions instead of summarizing\n4. Can exfiltrate conversation context or execute unintended actions',
+    vendor_contact_name: 'Google VRP',
+    vendor_contact_email: 'security@google.com',
+    affected_component: 'Gemini document analysis',
+    affected_versions: 'Gemini 1.5 Pro, Ultra',
+    date_discovered: '2024-11-20',
+    date_vendor_notified: '2024-11-25',
     cve_eligible: 0
   })
-  await api.cve.move(mobileLeak.id, 'Vendor Contacted', initechMobile.id, 0)
-  const mobileLeakFu = new Date()
-  mobileLeakFu.setDate(mobileLeakFu.getDate() + 7)
-  await api.cve.update(mobileLeak.id, {
-    followup_due_date: mobileLeakFu.toISOString().slice(0, 10),
-    bounty_eligible: 1,
-    bounty_status: 'submitted',
-    bounty_url: 'https://bugcrowd.com/initech/reports/99001'
-  })
-  const mobileTodos = await api.todo.list(mobileLeak.id)
-  await completeTodo(mobileTodos, 'Reproduce & document', 'Extracted keys from APK. Verified they work against prod API.')
-  await completeTodo(mobileTodos, 'CVSS severity', 'CVSS 3.1 Base: 6.5 (Medium). Requires APK decompilation but keys are static.')
-  await completeTodo(mobileTodos, 'affected versions', 'All 4.x versions. Keys appear identical across versions.')
-  await completeTodo(mobileTodos, 'Draft initial disclosure', 'Submitted via Bugcrowd with extracted keys and impact.')
-  await completeTodo(mobileTodos, 'Send disclosure', 'Submitted through Bugcrowd on Dec 12.')
-  await api.followup.create(mobileLeak.id, { type: 'Note', note: 'Submitted via Bugcrowd. Awaiting triage.' })
+  await api.cve.move(geminiPromptInj.id, 'Vendor Contacted', gemini.id, 0)
+  await api.cve.move(geminiPromptInj.id, 'Negotiating', gemini.id, 0)
+  await api.cve.update(geminiPromptInj.id, { bounty_eligible: 1 })
+  const geminiTodos = await api.todo.list(geminiPromptInj.id)
+  await completeTodo(geminiTodos, 'Reproduce & document', 'Confirmed with multiple PDF payloads. Works consistently on Gemini 1.5 Pro.')
+  await completeTodo(geminiTodos, 'CVSS severity', 'CVSS 3.1 Base: 6.5 (Medium). Requires user to upload attacker-controlled document.')
+  await completeTodo(geminiTodos, 'affected versions', 'Gemini 1.5 Pro and Ultra as of Nov 2024.')
+  await completeTodo(geminiTodos, 'Draft initial disclosure', 'Submitted via bughunters.google.com with PoC PDFs.')
+  await completeTodo(geminiTodos, 'Send disclosure', 'Submitted through Google VRP on Nov 25.')
+  await completeTodo(geminiTodos, 'Confirm vendor', 'Google triaged within 24h. Under investigation.')
+  await api.followup.create(geminiPromptInj.id, { type: 'Note', note: 'Submitted via bughunters.google.com. Triaged as P2.' })
+  await api.followup.create(geminiPromptInj.id, { type: 'Email Received', note: 'Google VRP confirmed. Discussing severity and scope with AI safety team.' })
 
-  // ── Archived CVEs (Hall of Fame) ──
-
-  // 6. Archived: path traversal (all todos done)
-  const pathTraversal = await api.cve.create({
-    swimlane_id: acmeApi.id,
-    title: 'Path traversal in file download endpoint',
+  // 7. Bounty-only (no CVE): Gmail XSS, paid
+  const gmailXss = await api.cve.create({
+    swimlane_id: gmail.id,
+    title: 'Stored XSS via AMP email rendering',
     severity: 'High' as Severity,
     stage: 'Discovery' as Stage,
-    cve_id: 'CVE-2024-41002',
-    description: '1. Send GET /api/v2/files/download?path=../../etc/passwd\n2. Server returns contents of /etc/passwd\n3. Any file readable by the app service account can be exfiltrated',
-    vendor_contact_name: 'Acme Security Team',
-    vendor_contact_email: 'security@acmecorp.example',
-    affected_component: '/api/v2/files/download',
-    affected_versions: '2.1.0 - 2.3.4',
-    date_discovered: '2024-03-10',
-    date_vendor_notified: '2024-03-15',
-    date_cve_requested: '2024-04-20',
-    date_disclosed: '2024-06-15'
+    description: '1. Send an AMP-formatted email with crafted amp-bind expression\n2. Recipient opens the email in Gmail web client\n3. JavaScript executes in the context of mail.google.com\n4. Can read emails, send emails as the victim, access Google account',
+    vendor_contact_name: 'Google VRP',
+    vendor_contact_email: 'security@google.com',
+    affected_component: 'AMP email renderer',
+    affected_versions: 'Gmail web client',
+    date_discovered: '2024-08-01',
+    date_vendor_notified: '2024-08-05',
+    date_disclosed: '2024-11-01',
+    cve_eligible: 0
   })
-  await api.cve.move(pathTraversal.id, 'Vendor Contacted', acmeApi.id, 0)
-  await api.cve.move(pathTraversal.id, 'Negotiating', acmeApi.id, 0)
-  await api.cve.move(pathTraversal.id, 'CVE Requested', acmeApi.id, 0)
-  await api.cve.move(pathTraversal.id, 'Published', acmeApi.id, 0)
-  await api.cve.update(pathTraversal.id, { patch_status: 'patch_available' })
-  const ptTodos = await api.todo.list(pathTraversal.id)
-  for (const t of ptTodos) {
-    await api.todo.complete(t.id, { completion_note: 'Completed during disclosure process.' })
-  }
-  await api.cve.archive(pathTraversal.id)
+  await api.cve.move(gmailXss.id, 'Vendor Contacted', gmail.id, 0)
+  await api.cve.move(gmailXss.id, 'Negotiating', gmail.id, 0)
+  await api.cve.move(gmailXss.id, 'Published', gmail.id, 0)
+  await api.cve.update(gmailXss.id, {
+    patch_status: 'patch_available',
+    bounty_eligible: 1,
+    bounty_status: 'paid',
+    bounty_amount: '$10,000',
+    bounty_paid_date: '2024-11-15',
+    bounty_url: 'https://bughunters.google.com/report/12345'
+  })
+  const gmailTodos = await api.todo.list(gmailXss.id)
+  for (const t of gmailTodos) await api.todo.complete(t.id, { completion_note: 'Completed during disclosure.' })
+  await api.followup.create(gmailXss.id, { type: 'Note', note: 'Submitted via bughunters.google.com. Triaged as P1 within 6 hours.' })
+  await api.followup.create(gmailXss.id, { type: 'Email Received', note: 'Google patched within 7 days. Bounty approved at $10,000.' })
+  await api.cve.archive(gmailXss.id)
 
-  // 7. Archived: privilege escalation (all todos done)
-  const privEsc = await api.cve.create({
-    swimlane_id: globexERP.id,
-    title: 'Privilege escalation via role parameter tampering',
+  // 8. Discovery: GCP IAM misconfiguration
+  const gcpIam = await api.cve.create({
+    swimlane_id: gcp.id,
+    title: 'IAM policy evaluation bypass via conditional role bindings',
+    severity: 'High' as Severity,
+    stage: 'Discovery' as Stage,
+    description: '1. Create a service account with conditional IAM binding\n2. Craft a request that matches the condition but should be denied\n3. Policy evaluator incorrectly grants access due to condition parsing bug\n4. Can escalate privileges across GCP projects',
+    affected_component: 'IAM Policy Evaluator',
+    affected_versions: 'GCP IAM API v1',
+    date_discovered: '2024-12-15'
+  })
+  const gcpTodos = await api.todo.list(gcpIam.id)
+  await completeTodo(gcpTodos, 'Reproduce & document', 'Reproduced in isolated GCP project. Privilege escalation confirmed.')
+  await completeTodo(gcpTodos, 'CVSS severity', 'CVSS 3.1 Base: 8.1 (High). Authenticated, cross-project privilege escalation.')
+
+  // ══════════════════════════════════════════
+  // ── Archived (Hall of Fame) ──
+  // ══════════════════════════════════════════
+
+  // 9. Archived: AD NTLM relay (CVE disclosure)
+  const adNtlm = await api.cve.create({
+    swimlane_id: ad.id,
+    title: 'NTLM relay to LDAPS allows domain compromise',
     severity: 'Critical' as Severity,
     stage: 'Discovery' as Stage,
-    cve_id: 'CVE-2024-38901',
-    description: '1. Create a regular user account\n2. Intercept the POST /api/users/update request\n3. Add "role": "admin" to the JSON body\n4. Server accepts the change, user is now admin',
-    vendor_contact_name: 'Hank Scorpio',
-    vendor_contact_email: 'hank@globex.example',
-    affected_component: '/api/users/update',
-    affected_versions: '3.0 - 4.8',
-    date_discovered: '2024-01-05',
-    date_vendor_notified: '2024-01-10',
-    date_cve_requested: '2024-02-15',
-    date_disclosed: '2024-04-10'
+    cve_id: 'CVE-2024-21345',
+    description: '1. Position attacker on the network\n2. Coerce NTLM authentication from Domain Controller\n3. Relay credentials to LDAPS\n4. Create new Domain Admin account',
+    vendor_contact_name: 'MSRC',
+    vendor_contact_email: 'secure@microsoft.com',
+    affected_component: 'NTLM / LDAPS channel binding',
+    affected_versions: 'Windows Server 2016-2022',
+    date_discovered: '2024-01-10',
+    date_vendor_notified: '2024-01-15',
+    date_cve_requested: '2024-02-20',
+    date_disclosed: '2024-04-09'
   })
-  await api.cve.move(privEsc.id, 'Vendor Contacted', globexERP.id, 0)
-  await api.cve.move(privEsc.id, 'Negotiating', globexERP.id, 0)
-  await api.cve.move(privEsc.id, 'CVE Requested', globexERP.id, 0)
-  await api.cve.move(privEsc.id, 'Published', globexERP.id, 0)
-  await api.cve.update(privEsc.id, { patch_status: 'patch_available', patch_url: 'https://globex.example/advisory/2024-003' })
-  const peTodos = await api.todo.list(privEsc.id)
-  for (const t of peTodos) {
-    await api.todo.complete(t.id, { completion_note: 'Completed during disclosure process.' })
-  }
-  await api.cve.archive(privEsc.id)
+  await api.cve.move(adNtlm.id, 'Vendor Contacted', ad.id, 0)
+  await api.cve.move(adNtlm.id, 'Negotiating', ad.id, 0)
+  await api.cve.move(adNtlm.id, 'CVE Requested', ad.id, 0)
+  await api.cve.move(adNtlm.id, 'Published', ad.id, 0)
+  await api.cve.update(adNtlm.id, {
+    patch_status: 'patch_available',
+    bounty_eligible: 1,
+    bounty_status: 'paid',
+    bounty_amount: '$20,000',
+    bounty_paid_date: '2024-04-25'
+  })
+  const adNtlmTodos = await api.todo.list(adNtlm.id)
+  for (const t of adNtlmTodos) await api.todo.complete(t.id, { completion_note: 'Completed during disclosure.' })
+  await api.cve.archive(adNtlm.id)
 }
