@@ -1,6 +1,6 @@
 {
   "name": "cvease",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Desktop Kanban app for tracking CVE disclosure workflows",
   "main": "./out/main/index.js",
   "author": "marbas (https://github.com/marbas207)",
