@@ -3,20 +3,53 @@ import { api } from '../../lib/ipc'
 import type { Todo, Stage } from '../../types/cve'
 import { useBoardStore } from '../../store/boardStore'
 import { STAGE_REQUIREMENTS } from '../../lib/stageRequirements'
+import { vendorContactPrefill } from '../../lib/vendorPrefill'
 import { StageTransitionModal, type StageTransitionResult } from '../board/StageTransitionModal'
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
 import { Textarea } from '../ui/textarea'
 import { Label } from '../ui/label'
 import { cn } from '../../lib/utils'
-import { Plus, Trash2, ArrowRight, CheckCircle2, Circle } from 'lucide-react'
+import { Plus, Trash2, ArrowRight, CheckCircle2, Circle, Mail, FileText } from 'lucide-react'
 import { firePublishedConfetti } from '../../lib/confetti'
 
 interface Props {
   cveId: string
+  /**
+   * Optional callback fired when the user clicks the "Draft" button on a
+   * todo whose text matches the email-draft pattern. Lets the parent open
+   * its DisclosureEmailModal without TodoList needing to know about it.
+   */
+  onDraftEmail?: () => void
+  /**
+   * Same idea for the publication-step todos: open the parent's
+   * AdvisoryMarkdownModal when a matching todo is clicked.
+   */
+  onDraftAdvisory?: () => void
 }
 
-export function TodoList({ cveId }: Props) {
+/**
+ * Pattern-match todos that look like "draft initial disclosure email" so
+ * we can render a contextual action on them. The default checklist seed
+ * uses this exact phrase, but we match loosely so user-customised templates
+ * still work as long as they include "draft" plus one of "email"/"disclosure".
+ */
+function isEmailDraftTodo(text: string): boolean {
+  const lower = text.toLowerCase()
+  return lower.includes('draft') && (lower.includes('email') || lower.includes('disclosure'))
+}
+
+/**
+ * Pattern-match todos that look like the publication step. Catches the
+ * default seed item "Publish vulnerability" plus any user-added items
+ * containing "publish" or "advisory".
+ */
+function isAdvisoryDraftTodo(text: string): boolean {
+  const lower = text.toLowerCase()
+  return lower.includes('publish') || lower.includes('advisory')
+}
+
+export function TodoList({ cveId, onDraftEmail, onDraftAdvisory }: Props) {
   const [todos, setTodos] = useState<Todo[]>([])
   const [newText, setNewText] = useState('')
   const [addingCustom, setAddingCustom] = useState(false)
@@ -28,7 +61,7 @@ export function TodoList({ cveId }: Props) {
   // For stage transition (triggered todos)
   const [pendingTransition, setPendingTransition] = useState<{ todo: Todo; stage: Stage } | null>(null)
 
-  const { getCVEById, updateCVE, moveCVE, cves } = useBoardStore()
+  const { getCVEById, updateCVE, moveCVE, cves, swimlanes, vendors } = useBoardStore()
   const cve = getCVEById(cveId)
 
   useEffect(() => {
@@ -89,9 +122,15 @@ export function TodoList({ cveId }: Props) {
     })
     setTodos(prev => prev.map(t => t.id === todo.id ? updated : t))
 
-    // Apply field updates
-    if (Object.keys(result.fieldUpdates).length > 0) {
-      await updateCVE(cveId, result.fieldUpdates)
+    // Apply field updates — and when the trigger stage is Vendor Contacted,
+    // fill in any empty contact fields from the vendor record so the user
+    // doesn't lose pre-existing data we already have.
+    const fieldUpdates = { ...result.fieldUpdates }
+    if (stage === 'Vendor Contacted') {
+      Object.assign(fieldUpdates, vendorContactPrefill(cve, swimlanes, vendors))
+    }
+    if (Object.keys(fieldUpdates).length > 0) {
+      await updateCVE(cveId, fieldUpdates)
     }
 
     // Move to the new stage
@@ -211,6 +250,30 @@ export function TodoList({ cveId }: Props) {
                 <p className="text-xs text-muted-foreground mt-0.5 italic">{todo.completion_note}</p>
               )}
             </div>
+
+            {/* Inline action: draft a disclosure email for the matching todo. */}
+            {isEmailDraftTodo(todo.text) && !todo.completed && onDraftEmail && (
+              <button
+                onClick={onDraftEmail}
+                title="Open the disclosure email draft"
+                className="shrink-0 flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded border border-primary/40 text-primary hover:bg-primary/10 transition-colors"
+              >
+                <Mail className="w-2.5 h-2.5" />
+                Draft
+              </button>
+            )}
+
+            {/* Inline action: draft a publication advisory for the matching todo. */}
+            {isAdvisoryDraftTodo(todo.text) && !todo.completed && onDraftAdvisory && (
+              <button
+                onClick={onDraftAdvisory}
+                title="Open the advisory draft"
+                className="shrink-0 flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded border border-primary/40 text-primary hover:bg-primary/10 transition-colors"
+              >
+                <FileText className="w-2.5 h-2.5" />
+                Advisory
+              </button>
+            )}
 
             {/* Stage trigger badge */}
             {todo.trigger_stage && !todo.completed && (

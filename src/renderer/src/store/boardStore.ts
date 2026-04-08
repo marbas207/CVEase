@@ -3,12 +3,13 @@ import { persist, createJSONStorage } from 'zustand/middleware'
 import type { CVE, Vendor, Swimlane, Stage, Severity } from '../types/cve'
 import { api } from '../lib/ipc'
 import { STAGES } from '../lib/constants'
+import { tagsFromString } from '../lib/tags'
 
-// Only the three keys below survive a window reload — server-derived data
+// Only the keys below survive a window reload — server-derived data
 // (vendors / swimlanes / cves / archived / archiveEligible) is reloaded
 // from the DB on every launch by `loadBoard()`, so persisting it would
 // just risk showing a stale snapshot on the next start.
-type PersistedSlice = Pick<BoardState, 'collapsedVendors' | 'severityFilter' | 'hideEmptyLanes'>
+type PersistedSlice = Pick<BoardState, 'collapsedVendors' | 'severityFilter' | 'hideEmptyLanes' | 'tagFilter'>
 
 interface BoardState {
   demoActive: boolean
@@ -21,6 +22,8 @@ interface BoardState {
   activeDragId: string | null
   searchQuery: string
   severityFilter: Severity | null
+  /** Tags currently being filtered on. Empty set = no tag filter. */
+  tagFilter: Set<string>
   hideEmptyLanes: boolean
   isLoading: boolean
   error: string | null
@@ -46,6 +49,8 @@ interface BoardState {
   setSearch: (q: string) => void
   setSeverityFilter: (s: Severity | null) => void
   setHideEmptyLanes: (v: boolean) => void
+  toggleTagFilter: (tag: string) => void
+  clearTagFilter: () => void
 
   addSwimlane: (data: { software_name: string; vendor: string; version_affected?: string; url?: string }) => Promise<Swimlane>
   updateSwimlane: (id: string, data: Partial<Pick<Swimlane, 'software_name' | 'vendor' | 'version_affected' | 'url'>>) => Promise<void>
@@ -79,6 +84,7 @@ export const useBoardStore = create<BoardState>()(
   activeDragId: null,
   searchQuery: '',
   severityFilter: null,
+  tagFilter: new Set<string>(),
   hideEmptyLanes: true,
   isLoading: false,
   error: null,
@@ -93,11 +99,17 @@ export const useBoardStore = create<BoardState>()(
   }),
 
   getCVEsForCell: (swimlaneId, stage) => {
-    const { cves, searchQuery, severityFilter } = get()
+    const { cves, searchQuery, severityFilter, tagFilter } = get()
     return cves
       .filter(c => {
         if (c.swimlane_id !== swimlaneId || c.stage !== stage) return false
         if (severityFilter && c.severity !== severityFilter) return false
+        if (tagFilter.size > 0) {
+          // Tag filter is OR semantics: a CVE matches if any of its tags
+          // are in the current filter set.
+          const cveTags = tagsFromString(c.tags)
+          if (!cveTags.some((t) => tagFilter.has(t))) return false
+        }
         if (searchQuery) {
           const q = searchQuery.toLowerCase()
           return (
@@ -185,6 +197,14 @@ export const useBoardStore = create<BoardState>()(
   setSearch: (q) => set({ searchQuery: q }),
   setSeverityFilter: (s) => set({ severityFilter: s }),
   setHideEmptyLanes: (v) => set({ hideEmptyLanes: v }),
+
+  toggleTagFilter: (tag) => set((s) => {
+    const next = new Set(s.tagFilter)
+    if (next.has(tag)) next.delete(tag)
+    else next.add(tag)
+    return { tagFilter: next }
+  }),
+  clearTagFilter: () => set({ tagFilter: new Set<string>() }),
 
   addSwimlane: async (data) => {
     const lane = await api.swimlane.create(data)
@@ -288,20 +308,22 @@ export const useBoardStore = create<BoardState>()(
       partialize: (state): PersistedSlice => ({
         collapsedVendors: state.collapsedVendors,
         severityFilter: state.severityFilter,
-        hideEmptyLanes: state.hideEmptyLanes
+        hideEmptyLanes: state.hideEmptyLanes,
+        tagFilter: state.tagFilter
       }),
       // Set<string> doesn't survive JSON.stringify, so we serialise it as
-      // an array on the way out and rehydrate on the way in.
+      // an array on the way out and rehydrate on the way in. Both
+      // collapsedVendors and tagFilter are Sets.
       storage: createJSONStorage(() => localStorage, {
         replacer: (_key, value) => (value instanceof Set ? Array.from(value) : value),
         reviver: (key, value) =>
-          key === 'collapsedVendors' && Array.isArray(value)
+          (key === 'collapsedVendors' || key === 'tagFilter') && Array.isArray(value)
             ? new Set(value as string[])
             : value
       }),
-      // If we ever change the persisted shape, bumping this number will
-      // invalidate older snapshots cleanly instead of crashing on rehydrate.
-      version: 1,
+      // Bump when the persisted shape changes — invalidates old snapshots
+      // cleanly instead of crashing on rehydrate. Bumped to 2 for tagFilter.
+      version: 2,
       // Defensive: if the on-disk shape is malformed (manual edit, future
       // refactor) fall back to defaults rather than throwing during rehydrate.
       onRehydrateStorage: () => (_state, error) => {

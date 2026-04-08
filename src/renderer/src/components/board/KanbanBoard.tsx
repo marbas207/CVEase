@@ -15,6 +15,7 @@ import { StageTransitionModal, type StageTransitionResult } from './StageTransit
 import { useBoardStore } from '../../store/boardStore'
 import { api } from '../../lib/ipc'
 import { STAGE_REQUIREMENTS } from '../../lib/stageRequirements'
+import { vendorContactPrefill } from '../../lib/vendorPrefill'
 import type { CVE, Stage } from '../../types/cve'
 import { STAGES } from '../../lib/constants'
 import { firePublishedConfetti } from '../../lib/confetti'
@@ -153,10 +154,17 @@ export function KanbanBoard() {
     // Optimistic update now
     optimisticMove(cve.id, destStage, destSwimlaneId, targetIndex)
 
+    // Auto-fill vendor contact details when transitioning into Vendor
+    // Contacted — only fills empty fields, never overwrites manual edits.
+    const fieldUpdates = { ...result.fieldUpdates }
+    if (destStage === 'Vendor Contacted') {
+      Object.assign(fieldUpdates, vendorContactPrefill(cve, swimlanes, vendors))
+    }
+
     try {
       // Apply field updates if any
-      if (Object.keys(result.fieldUpdates).length > 0) {
-        await updateCVE(cve.id, result.fieldUpdates)
+      if (Object.keys(fieldUpdates).length > 0) {
+        await updateCVE(cve.id, fieldUpdates)
       }
       // Move card
       await moveCVE(cve.id, destStage, destSwimlaneId, targetIndex)

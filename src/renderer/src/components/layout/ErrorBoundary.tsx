@@ -58,7 +58,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
           <div className="p-5 space-y-4">
             <p className="text-sm text-muted-foreground">
-              The interface hit an unexpected error. Your data is safe — it lives in
+              The interface hit an unexpected error. Your data is safe; it lives in
               the database, not in this window. Reloading will rebuild the UI from scratch.
             </p>
 

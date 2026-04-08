@@ -1,7 +1,12 @@
 import { ipcMain, dialog, app, BrowserWindow } from 'electron'
 import { join } from 'path'
 import { openSync, readSync, closeSync, existsSync } from 'fs'
-import { backupDatabase, restoreDatabase } from '../db/database'
+import {
+  backupDatabase,
+  restoreDatabase,
+  purgeCVEData,
+  purgeAllUserData
+} from '../db/database'
 
 // SQLite database files start with this 16-byte magic header.
 const SQLITE_MAGIC = 'SQLite format 3\u0000'
@@ -102,5 +107,45 @@ export function registerDbHandlers(): void {
     } catch (e) {
       return { success: false, error: String(e) }
     }
+  })
+
+  // Shared helper for both purge variants. Writes a timestamped safety
+  // backup, runs `action`, and returns either the backup path on success
+  // or a structured error. The renderer enforces type-to-confirm UX before
+  // even getting here, so we don't second-guess the action at the IPC layer.
+  const runWithSafetyBackup = (
+    label: string,
+    action: () => void
+  ): { success: true; data: string } | { success: false; error: string } => {
+    const stamp = new Date().toISOString().replace(/[:.]/g, '-')
+    const safetyBackup = join(
+      app.getPath('userData'),
+      `cveorganizer-pre-${label}-${stamp}.db`
+    )
+    try {
+      backupDatabase(safetyBackup)
+    } catch (e) {
+      return {
+        success: false,
+        error: `Aborted: failed to take safety backup (${String(e)})`
+      }
+    }
+    try {
+      action()
+    } catch (e) {
+      return {
+        success: false,
+        error: `Purge failed (safety backup at ${safetyBackup}): ${String(e)}`
+      }
+    }
+    return { success: true, data: safetyBackup }
+  }
+
+  ipcMain.handle('db:purgeCVEData', () => {
+    return runWithSafetyBackup('purge-cves', purgeCVEData)
+  })
+
+  ipcMain.handle('db:purgeAll', () => {
+    return runWithSafetyBackup('purge-all', purgeAllUserData)
   })
 }

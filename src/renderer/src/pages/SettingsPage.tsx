@@ -4,9 +4,10 @@ import { api } from '../lib/ipc'
 import { SwimLaneForm } from '../components/swimlane/SwimLaneForm'
 import { VendorForm } from '../components/vendor/VendorForm'
 import { ChecklistTemplateEditor } from '../components/settings/ChecklistTemplateEditor'
+import { PurgeConfirmDialog } from '../components/settings/PurgeConfirmDialog'
 import { Button } from '../components/ui/button'
 import { Separator } from '../components/ui/separator'
-import { Plus, Pencil, Trash2, ChevronRight, Globe, Download, Upload, AlertTriangle, Mail, Building2 } from 'lucide-react'
+import { Plus, Pencil, Trash2, ChevronRight, Globe, Download, Upload, AlertTriangle, AlertOctagon, Mail, Building2, Eraser, Flame } from 'lucide-react'
 import type { Swimlane, Vendor } from '../types/cve'
 
 function SwimLaneListItem({ lane }: { lane: Swimlane }) {
@@ -109,11 +110,14 @@ function VendorListItem({ vendor }: { vendor: Vendor }) {
 }
 
 export function SettingsPage() {
-  const { vendors, swimlanes, loadBoard } = useBoardStore()
+  const { vendors, swimlanes, cves, loadBoard } = useBoardStore()
   const [addVendorOpen, setAddVendorOpen] = useState(false)
   const [addOpen, setAddOpen] = useState(false)
   const [backupStatus, setBackupStatus] = useState<string | null>(null)
   const [restoring, setRestoring] = useState(false)
+  const [purgeCVEsOpen, setPurgeCVEsOpen] = useState(false)
+  const [purgeAllOpen, setPurgeAllOpen] = useState(false)
+  const [purgeStatus, setPurgeStatus] = useState<string | null>(null)
 
   const handleBackup = async () => {
     setBackupStatus(null)
@@ -142,8 +146,23 @@ export function SettingsPage() {
     }
   }
 
+  const handlePurgeCVEs = async () => {
+    setPurgeStatus(null)
+    const safetyBackup = await api.db.purgeCVEData()
+    await loadBoard()
+    setPurgeStatus(`CVE data purged. Safety backup saved to ${safetyBackup}`)
+  }
+
+  const handlePurgeAll = async () => {
+    setPurgeStatus(null)
+    const safetyBackup = await api.db.purgeAll()
+    await loadBoard()
+    setPurgeStatus(`Everything purged. Safety backup saved to ${safetyBackup}`)
+  }
+
   return (
-    <div className="flex-1 overflow-y-auto p-6 max-w-2xl">
+    <div className="flex-1 overflow-y-auto p-6">
+      <div className="max-w-2xl mx-auto">
       <h2 className="text-xl font-bold mb-1">Settings</h2>
       <p className="text-sm text-muted-foreground mb-6">Manage vendors, software entries, and app preferences.</p>
 
@@ -244,8 +263,88 @@ export function SettingsPage() {
         </div>
       </div>
 
+      {/* Danger Zone */}
+      <div className="bg-card border border-destructive/30 rounded-lg p-4 mt-6">
+        <h3 className="text-sm font-semibold mb-1 flex items-center gap-2 text-destructive">
+          <AlertOctagon className="w-4 h-4" />
+          Danger Zone
+        </h3>
+        <p className="text-xs text-muted-foreground mb-4">
+          Permanent deletions. Each action takes a timestamped safety backup first, recoverable via Import &amp; Restore above.
+        </p>
+
+        <div className="space-y-3">
+          <div className="flex items-start justify-between gap-3 p-3 rounded-md border border-border bg-muted/20">
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold flex items-center gap-1.5">
+                <Eraser className="w-3.5 h-3.5 text-destructive" />
+                Reset CVE Data
+              </p>
+              <p className="text-[11px] text-muted-foreground mt-0.5">
+                Deletes all vulnerabilities, follow-ups, todos, and attachments. Keeps vendors, software, and your checklist template.
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPurgeCVEsOpen(true)}
+              disabled={cves.length === 0}
+              className="shrink-0 border-destructive/40 text-destructive hover:bg-destructive/10"
+            >
+              Reset
+            </Button>
+          </div>
+
+          <div className="flex items-start justify-between gap-3 p-3 rounded-md border border-border bg-muted/20">
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold flex items-center gap-1.5">
+                <Flame className="w-3.5 h-3.5 text-destructive" />
+                Reset Everything
+              </p>
+              <p className="text-[11px] text-muted-foreground mt-0.5">
+                Deletes vulnerabilities, swimlanes, AND vendors. Only the checklist template and database schema survive. Use this for a true fresh start.
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPurgeAllOpen(true)}
+              disabled={cves.length === 0 && swimlanes.length === 0 && vendors.length === 0}
+              className="shrink-0 border-destructive/40 text-destructive hover:bg-destructive/10"
+            >
+              Reset
+            </Button>
+          </div>
+        </div>
+
+        {purgeStatus && (
+          <p className="text-xs text-muted-foreground mt-3 break-all">{purgeStatus}</p>
+        )}
+      </div>
+
+      <PurgeConfirmDialog
+        open={purgeCVEsOpen}
+        onOpenChange={setPurgeCVEsOpen}
+        title="Reset CVE Data"
+        description={`This will permanently delete ${cves.length} vulnerabilit${cves.length === 1 ? 'y' : 'ies'} along with every follow-up, todo, and attachment.\n\nVendors, software entries, and your checklist template will be preserved.\n\nA timestamped safety backup will be written to your userData folder before anything is deleted.`}
+        confirmKeyword="PURGE"
+        confirmLabel="Delete CVE Data"
+        onConfirm={handlePurgeCVEs}
+      />
+
+      <PurgeConfirmDialog
+        open={purgeAllOpen}
+        onOpenChange={setPurgeAllOpen}
+        title="Reset Everything"
+        description={`This will permanently delete ALL ${cves.length} vulnerabilit${cves.length === 1 ? 'y' : 'ies'}, ${swimlanes.length} software entr${swimlanes.length === 1 ? 'y' : 'ies'}, and ${vendors.length} vendor${vendors.length === 1 ? '' : 's'}.\n\nYour checklist template will be preserved.\n\nA timestamped safety backup will be written to your userData folder before anything is deleted.`}
+        confirmKeyword="PURGE EVERYTHING"
+        confirmLabel="Delete Everything"
+        onConfirm={handlePurgeAll}
+      />
+
       <VendorForm open={addVendorOpen} onOpenChange={setAddVendorOpen} />
       <SwimLaneForm open={addOpen} onOpenChange={setAddOpen} />
+      </div>
     </div>
   )
 }

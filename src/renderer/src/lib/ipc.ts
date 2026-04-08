@@ -79,7 +79,9 @@ export const api = {
   },
   db: {
     backup: () => unwrap<string | null>(window.api.db.backup()),
-    restore: () => unwrap<string | null>(window.api.db.restore())
+    restore: () => unwrap<string | null>(window.api.db.restore()),
+    purgeCVEData: () => unwrap<string>(window.api.db.purgeCVEData()),
+    purgeAll: () => unwrap<string>(window.api.db.purgeAll())
   },
   attachment: {
     list: (cveId: string) => unwrap<Attachment[]>(window.api.attachment.list(cveId)),

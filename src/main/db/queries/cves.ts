@@ -29,6 +29,9 @@ export interface CVERow {
   date_disclosed: string | null
   affected_component: string | null
   affected_versions: string | null
+  cvss_vector: string | null
+  cwe_id: string | null
+  tags: string | null
   followup_due_date: string | null
   escalated_to_vince: number
   vince_case_id: string | null
@@ -64,6 +67,9 @@ export interface CreateCVEInput {
   date_disclosed?: string
   affected_component?: string
   affected_versions?: string
+  cvss_vector?: string
+  cwe_id?: string
+  tags?: string
   cve_eligible?: number | null
 }
 
@@ -82,6 +88,9 @@ export interface UpdateCVEInput {
   date_disclosed?: string | null
   affected_component?: string | null
   affected_versions?: string | null
+  cvss_vector?: string | null
+  cwe_id?: string | null
+  tags?: string | null
   followup_due_date?: string | null
   escalated_to_vince?: boolean
   vince_case_id?: string | null
@@ -169,8 +178,9 @@ export function createCVE(input: CreateCVEInput): CVERow {
       id, swimlane_id, title, cve_id, severity, stage, description,
       vendor_contact_name, vendor_contact_email, vendor_contact_other,
       date_discovered, date_vendor_notified, disclosure_deadline,
-      date_cve_requested, date_disclosed, affected_component, affected_versions, sort_order
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      date_cve_requested, date_disclosed, affected_component, affected_versions,
+      cvss_vector, cwe_id, tags, sort_order
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     id, input.swimlane_id, input.title,
     input.cve_id ?? null, input.severity, stage,
@@ -185,6 +195,9 @@ export function createCVE(input: CreateCVEInput): CVERow {
     input.date_disclosed ?? null,
     input.affected_component ?? null,
     input.affected_versions ?? null,
+    input.cvss_vector ?? null,
+    input.cwe_id ?? null,
+    input.tags ?? null,
     maxOrder + 1
   )
   // Seed default disclosure workflow todos
@@ -258,6 +271,9 @@ export function updateCVE(id: string, input: UpdateCVEInput): CVERow {
   if ('date_disclosed' in input) setField('date_disclosed', input.date_disclosed ?? null)
   if ('affected_component' in input) setField('affected_component', input.affected_component ?? null)
   if ('affected_versions' in input) setField('affected_versions', input.affected_versions ?? null)
+  if ('cvss_vector' in input) setField('cvss_vector', input.cvss_vector ?? null)
+  if ('cwe_id' in input) setField('cwe_id', input.cwe_id ?? null)
+  if ('tags' in input) setField('tags', input.tags ?? null)
   if ('followup_due_date' in input) setField('followup_due_date', input.followup_due_date ?? null)
   if (input.escalated_to_vince !== undefined) setField('escalated_to_vince', input.escalated_to_vince ? 1 : 0)
   if ('vince_case_id' in input) setField('vince_case_id', input.vince_case_id ?? null)

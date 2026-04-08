@@ -1,6 +1,6 @@
 {
   "name": "cvease",
-  "version": "1.2.2",
+  "version": "1.2.3",
   "description": "Desktop Kanban app for tracking CVE disclosure workflows",
   "main": "./out/main/index.js",
   "author": "marbas (https://github.com/marbas207)",
@@ -25,6 +25,7 @@
     "@dnd-kit/utilities": "^3.2.2",
     "@electron-toolkit/utils": "^4.0.0",
     "@radix-ui/react-dialog": "^1.1.4",
+    "@radix-ui/react-popover": "^1.1.4",
     "@radix-ui/react-scroll-area": "^1.2.2",
     "@radix-ui/react-select": "^2.1.4",
     "@radix-ui/react-separator": "^1.1.1",
@@ -40,6 +41,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.469.0",
+    "react-markdown": "^9.0.1",
     "tailwind-merge": "^2.6.0",
     "uuid": "^11.0.5",
     "zod": "^3.24.1",
@@ -48,6 +50,7 @@
   "devDependencies": {
     "@electron-toolkit/tsconfig": "^1.0.1",
     "@eslint/js": "^9.18.0",
+    "@tailwindcss/typography": "^0.5.16",
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^22.10.7",
     "@types/react": "^18.3.18",

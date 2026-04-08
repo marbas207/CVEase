@@ -6,7 +6,7 @@ import { App } from './App'
 import { ErrorBoundary } from './components/layout/ErrorBoundary'
 import { DashboardPage } from './pages/DashboardPage'
 import { BoardPage } from './pages/BoardPage'
-import { TimelinePage } from './pages/TimelinePage'
+import { CalendarPage } from './pages/CalendarPage'
 import { HallOfFamePage } from './pages/HallOfFamePage'
 import { SettingsPage } from './pages/SettingsPage'
 import { AboutPage } from './pages/AboutPage'
@@ -24,7 +24,7 @@ ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
             <Route index element={<Navigate to="/dashboard" replace />} />
             <Route path="dashboard" element={<DashboardPage />} />
             <Route path="board" element={<BoardPage />} />
-            <Route path="timeline" element={<TimelinePage />} />
+            <Route path="calendar" element={<CalendarPage />} />
             <Route path="hof" element={<HallOfFamePage />} />
             <Route path="settings" element={<SettingsPage />} />
             <Route path="about" element={<AboutPage />} />

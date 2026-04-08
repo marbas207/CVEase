@@ -1,10 +1,12 @@
-import { Search, X, Eye, EyeOff } from 'lucide-react'
+import { Search, X, Eye, EyeOff, Tags } from 'lucide-react'
 import { Input } from '../ui/input'
 import { Button } from '../ui/button'
+import { Popover, PopoverTrigger, PopoverContent } from '../ui/popover'
 import { useBoardStore } from '../../store/boardStore'
 import { SEVERITIES } from '../../lib/constants'
 import type { Severity } from '../../types/cve'
 import { cn } from '../../lib/utils'
+import { collectAllTags } from '../../lib/tags'
 
 const SEVERITY_CHIP: Record<Severity, string> = {
   Critical: 'bg-red-600 text-white',
@@ -19,7 +21,23 @@ interface Props {
 }
 
 export function TopBar({ title, showBoardFilters = false }: Props) {
-  const { searchQuery, setSearch, severityFilter, setSeverityFilter, hideEmptyLanes, setHideEmptyLanes } = useBoardStore()
+  const {
+    searchQuery,
+    setSearch,
+    severityFilter,
+    setSeverityFilter,
+    hideEmptyLanes,
+    setHideEmptyLanes,
+    cves,
+    tagFilter,
+    toggleTagFilter,
+    clearTagFilter
+  } = useBoardStore()
+
+  // Build the tag list once per render from current CVEs. Cheap because
+  // we only iterate the cves array — no DB call.
+  const allTags = collectAllTags(cves)
+  const activeTagCount = tagFilter.size
 
   return (
     <div className="flex items-center gap-3 px-4 py-2 border-b border-border bg-background shrink-0 drag-region">
@@ -47,6 +65,64 @@ export function TopBar({ title, showBoardFilters = false }: Props) {
           </button>
         ))}
       </div>
+
+      {/* Tag filter — only shown if any tags exist anywhere. The popover
+          lists every unique tag across the (unfiltered) CVEs and lets
+          the user toggle them in/out. OR semantics. */}
+      {allTags.length > 0 && (
+        <Popover>
+          <PopoverTrigger asChild>
+            <button
+              className={cn(
+                'no-drag flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border transition-all',
+                activeTagCount > 0
+                  ? 'bg-primary/15 text-primary border-primary/40'
+                  : 'border-border text-muted-foreground hover:border-muted-foreground/50'
+              )}
+              title="Filter by tag"
+            >
+              <Tags className="w-3 h-3" />
+              Tags
+              {activeTagCount > 0 && <span className="text-[10px]">· {activeTagCount}</span>}
+            </button>
+          </PopoverTrigger>
+          <PopoverContent align="end" className="w-64 p-2">
+            <div className="flex items-center justify-between mb-2 px-1">
+              <p className="text-xs font-semibold">Filter by tag</p>
+              {activeTagCount > 0 && (
+                <button
+                  onClick={clearTagFilter}
+                  className="text-[10px] text-muted-foreground hover:text-foreground"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-1 max-h-64 overflow-y-auto">
+              {allTags.map((tag) => {
+                const active = tagFilter.has(tag)
+                return (
+                  <button
+                    key={tag}
+                    onClick={() => toggleTagFilter(tag)}
+                    className={cn(
+                      'text-[11px] px-1.5 py-0.5 rounded transition-colors',
+                      active
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-primary/10 text-primary hover:bg-primary/20'
+                    )}
+                  >
+                    {tag}
+                  </button>
+                )
+              })}
+            </div>
+            <p className="text-[10px] text-muted-foreground mt-2 px-1">
+              Showing CVEs that have any of the selected tags.
+            </p>
+          </PopoverContent>
+        </Popover>
+      )}
 
       {/* View toggle (board only) */}
       {showBoardFilters && (
@@ -79,12 +155,17 @@ export function TopBar({ title, showBoardFilters = false }: Props) {
       </div>
 
       {/* Filter count indicator */}
-      {(searchQuery || severityFilter || hideEmptyLanes) && (
+      {(searchQuery || severityFilter || hideEmptyLanes || activeTagCount > 0) && (
         <Button
           variant="ghost"
           size="sm"
           className="no-drag h-8 text-xs text-muted-foreground"
-          onClick={() => { setSearch(''); setSeverityFilter(null); setHideEmptyLanes(false) }}
+          onClick={() => {
+            setSearch('')
+            setSeverityFilter(null)
+            setHideEmptyLanes(false)
+            clearTagFilter()
+          }}
         >
           Clear filters
         </Button>

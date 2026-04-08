@@ -8,19 +8,42 @@ import { TodoList } from './TodoList'
 import { TimelineMilestones } from './TimelineMilestones'
 import { CVEForm } from './CVEForm'
 import { FollowupActionModal } from './FollowupActionModal'
+import { DisclosureEmailModal } from './DisclosureEmailModal'
+import { AdvisoryMarkdownModal } from './AdvisoryMarkdownModal'
+import { MarkdownContent } from '../MarkdownContent'
+import { tagsFromString } from '../../lib/tags'
 import { Separator } from '../ui/separator'
 import { Button } from '../ui/button'
-import { X, Pencil, Trash2, ExternalLink, AlertTriangle, ShieldAlert, Link2, BellRing, DollarSign } from 'lucide-react'
+import { X, Pencil, Trash2, ExternalLink, AlertTriangle, ShieldAlert, Link2, BellRing, DollarSign, Mail, FileText } from 'lucide-react'
 import { formatDate, daysUntil } from '../../lib/utils'
 
 export function CVEDetailPanel() {
-  const { selectedCVEId, selectCVE, getCVEById, deleteCVE } = useBoardStore()
+  const { selectedCVEId, selectCVE, getCVEById, deleteCVE, swimlanes, vendors } = useBoardStore()
   const [editOpen, setEditOpen] = useState(false)
   const [followupOpen, setFollowupOpen] = useState(false)
+  const [emailOpen, setEmailOpen] = useState(false)
+  const [advisoryOpen, setAdvisoryOpen] = useState(false)
 
   const cve = selectedCVEId ? getCVEById(selectedCVEId) : undefined
 
   if (!cve) return null
+
+  // Used by the disclosure email modal — both lookups already happen
+  // elsewhere in the renderer so this is cheap.
+  const swimlane = swimlanes.find((s) => s.id === cve.swimlane_id)
+  const vendor = swimlane?.vendor_id ? vendors.find((v) => v.id === swimlane.vendor_id) : undefined
+
+  // The disclosure-email draft is a *first contact* action — once vendor has
+  // been notified the template is meaningless. Same condition as the banner
+  // and the checklist button so the three surfaces are consistent.
+  const showEmailDraftAction = cve.stage === 'Discovery' && !cve.date_vendor_notified
+
+  // The advisory draft is a *prep-for-publication* action — show it during
+  // Negotiating and CVE Requested (when the user is writing up the advisory
+  // before release), but hide it once the CVE is actually Published. By then
+  // the draft has served its purpose and the action is stale.
+  const showAdvisoryDraftAction =
+    cve.stage === 'Negotiating' || cve.stage === 'CVE Requested'
 
   const handleDelete = async () => {
     if (confirm(`Delete "${cve.title}"? This cannot be undone.`)) {
@@ -59,7 +82,31 @@ export function CVEDetailPanel() {
             </div>
             <h2 className="text-base font-semibold leading-snug">{cve.title}</h2>
           </div>
-          <div className="flex items-center gap-1 shrink-0">
+          <div className="flex items-center gap-1.5 shrink-0">
+            {showEmailDraftAction && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setEmailOpen(true)}
+                className="h-8 gap-1.5 text-xs border-primary/40 text-primary hover:bg-primary/10"
+                title="Draft a first-contact email pre-filled from this vulnerability"
+              >
+                <Mail className="w-3.5 h-3.5" />
+                Draft disclosure
+              </Button>
+            )}
+            {showAdvisoryDraftAction && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setAdvisoryOpen(true)}
+                className="h-8 gap-1.5 text-xs border-primary/40 text-primary hover:bg-primary/10"
+                title="Draft a publication-ready advisory in Markdown"
+              >
+                <FileText className="w-3.5 h-3.5" />
+                Draft advisory
+              </Button>
+            )}
             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditOpen(true)} title="Edit">
               <Pencil className="w-4 h-4" />
             </Button>
@@ -79,13 +126,14 @@ export function CVEDetailPanel() {
             Created {formatDate(cve.created_at)} · Updated {formatDate(cve.updated_at)}
           </div>
 
-          {/* Description / Reproduction steps */}
+          {/* Description / Reproduction steps — rendered as Markdown so
+              code blocks, links, headers, and emphasis come through. */}
           {cve.description && (
             <div>
               <p className="text-sm font-semibold mb-2">Reproduction Steps / Description</p>
-              <pre className="text-xs bg-muted rounded-md p-3 whitespace-pre-wrap font-mono overflow-x-auto">
-                {cve.description}
-              </pre>
+              <div className="bg-muted/40 border border-border rounded-md p-3">
+                <MarkdownContent content={cve.description} />
+              </div>
             </div>
           )}
 
@@ -102,6 +150,43 @@ export function CVEDetailPanel() {
                 <div className="shrink-0">
                   <p className="text-xs text-muted-foreground mb-1">Versions</p>
                   <p className="text-sm bg-muted rounded px-2 py-1 font-mono">{cve.affected_versions}</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Tags — flat chips, no header. Only shown if any tags exist. */}
+          {(() => {
+            const tags = tagsFromString(cve.tags)
+            return tags.length > 0 ? (
+              <div className="flex flex-wrap gap-1">
+                {tags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="text-[11px] font-medium bg-primary/15 text-primary rounded px-1.5 py-0.5"
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            ) : null
+          })()}
+
+          {/* CVSS vector + CWE — paste-from-calculator metadata that researchers
+              expect on a "real" CVE record. Both optional; we render whatever is
+              present. */}
+          {(cve.cvss_vector || cve.cwe_id) && (
+            <div className="flex gap-3 flex-wrap">
+              {cve.cvss_vector && (
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-muted-foreground mb-1">CVSS Vector</p>
+                  <p className="text-xs bg-muted rounded px-2 py-1 font-mono break-all">{cve.cvss_vector}</p>
+                </div>
+              )}
+              {cve.cwe_id && (
+                <div className="shrink-0">
+                  <p className="text-xs text-muted-foreground mb-1">CWE</p>
+                  <p className="text-sm bg-muted rounded px-2 py-1 font-mono">{cve.cwe_id}</p>
                 </div>
               )}
             </div>
@@ -200,7 +285,11 @@ export function CVEDetailPanel() {
           <Separator />
 
           {/* Checklist */}
-          <TodoList cveId={cve.id} />
+          <TodoList
+            cveId={cve.id}
+            onDraftEmail={() => setEmailOpen(true)}
+            onDraftAdvisory={() => setAdvisoryOpen(true)}
+          />
 
           <Separator />
 
@@ -250,6 +339,24 @@ export function CVEDetailPanel() {
 
       <CVEForm open={editOpen} onOpenChange={setEditOpen} cve={cve} />
       <FollowupActionModal open={followupOpen} onOpenChange={setFollowupOpen} cveId={cve.id} />
+      {swimlane && (
+        <DisclosureEmailModal
+          open={emailOpen}
+          onOpenChange={setEmailOpen}
+          cve={cve}
+          swimlane={swimlane}
+          vendor={vendor}
+        />
+      )}
+      {swimlane && (
+        <AdvisoryMarkdownModal
+          open={advisoryOpen}
+          onOpenChange={setAdvisoryOpen}
+          cve={cve}
+          swimlane={swimlane}
+          vendor={vendor}
+        />
+      )}
     </>
   )
 }

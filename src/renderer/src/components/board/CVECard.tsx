@@ -8,6 +8,7 @@ import { SEVERITY_BORDER } from '../../lib/constants'
 import { useDeadlineStatus } from '../../hooks/useDeadlineStatus'
 import type { CVE } from '../../types/cve'
 import { useBoardStore } from '../../store/boardStore'
+import { tagsFromString } from '../../lib/tags'
 
 interface Props {
   cve: CVE
@@ -74,6 +75,30 @@ export function CVECard({ cve, isDragOverlay = false }: Props) {
           {cve.affected_component}{cve.affected_component && cve.affected_versions ? ' · ' : ''}{cve.affected_versions && `v${cve.affected_versions}`}
         </p>
       )}
+      {(() => {
+        const tags = tagsFromString(cve.tags)
+        if (tags.length === 0) return null
+        const visible = tags.slice(0, 3)
+        const hidden = tags.length - visible.length
+        return (
+          <div className="flex flex-wrap gap-1 mb-1">
+            {visible.map((tag) => (
+              <span
+                key={tag}
+                className="text-[10px] font-medium bg-primary/15 text-primary rounded px-1 py-0.5 max-w-[120px] truncate"
+                title={tag}
+              >
+                {tag}
+              </span>
+            ))}
+            {hidden > 0 && (
+              <span className="text-[10px] font-medium text-muted-foreground/70 px-1 py-0.5">
+                +{hidden}
+              </span>
+            )}
+          </div>
+        )
+      })()}
       {(cve.escalated_to_vince === 1 || cve.patch_status === 'no_patch' || cve.patch_status === 'wont_fix' || (cve.bounty_status && cve.bounty_status !== 'none')) && (
         <div className="flex items-center gap-1.5 flex-wrap mb-1">
           {cve.escalated_to_vince === 1 && (

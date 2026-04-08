@@ -64,6 +64,9 @@ export interface CVE {
   date_disclosed: string | null
   affected_component: string | null
   affected_versions: string | null
+  cvss_vector: string | null
+  cwe_id: string | null
+  tags: string | null
   followup_due_date: string | null
   escalated_to_vince: number
   vince_case_id: string | null

@@ -405,4 +405,23 @@ export function runMigrations(db: Database.Database): void {
     )
     db.prepare('INSERT INTO schema_version (version) VALUES (?)').run(13)
   }
+
+  if (currentVersion < 14) {
+    // CVSS vector string (e.g. "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H")
+    // and CWE identifier (e.g. "CWE-79"). Both are optional, free-form text;
+    // the renderer doesn't try to parse them — it just stores and displays.
+    // Researchers paste these from external CVSS calculators / CWE lookups.
+    addColumn(db, 'cves', 'cvss_vector', 'TEXT')
+    addColumn(db, 'cves', 'cwe_id', 'TEXT')
+    db.prepare('INSERT INTO schema_version (version) VALUES (?)').run(14)
+  }
+
+  if (currentVersion < 15) {
+    // Free-form tags. Stored as a comma-separated string for simplicity —
+    // the renderer is the only consumer and it splits/joins. We don't need
+    // a separate cve_tags table for the volumes a personal-productivity
+    // tool sees, and the comma-separated form survives JSON export trivially.
+    addColumn(db, 'cves', 'tags', 'TEXT')
+    db.prepare('INSERT INTO schema_version (version) VALUES (?)').run(15)
+  }
 }

@@ -5,6 +5,7 @@ import { FollowupActionModal } from '../components/cve/FollowupActionModal'
 import { STAGES } from '../lib/constants'
 import type { CVE, Stage, Severity } from '../types/cve'
 import { isFollowupOverdue, isDeadlineWarning, isDeadlineOverdue } from './dashboard/helpers'
+import { tagsFromString } from '../lib/tags'
 import { StatsRow } from './dashboard/StatsRow'
 import { PipelineBar } from './dashboard/PipelineBar'
 import { SeverityBreakdown } from './dashboard/SeverityBreakdown'
@@ -12,12 +13,16 @@ import { ActionItemsGrid, type CVEWithContext } from './dashboard/ActionItemsGri
 import { RecentlyPublished } from './dashboard/RecentlyPublished'
 
 export function DashboardPage() {
-  const { cves: allCves, archivedCVEs, swimlanes, vendors, selectCVE, severityFilter, searchQuery } = useBoardStore()
+  const { cves: allCves, archivedCVEs, swimlanes, vendors, selectCVE, severityFilter, searchQuery, tagFilter } = useBoardStore()
   const [followupCveId, setFollowupCveId] = useState<string | null>(null)
 
   // Apply the same filters as the board
   const cves = allCves.filter((c) => {
     if (severityFilter && c.severity !== severityFilter) return false
+    if (tagFilter.size > 0) {
+      const cveTags = tagsFromString(c.tags)
+      if (!cveTags.some((t) => tagFilter.has(t))) return false
+    }
     if (searchQuery) {
       const q = searchQuery.toLowerCase()
       return (

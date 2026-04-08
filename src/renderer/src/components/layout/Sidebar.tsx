@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom'
-import { Gauge, Columns3, Clock, Settings, Trophy, Sun, Moon, Info } from 'lucide-react'
+import { Gauge, Columns3, CalendarDays, Settings, Trophy, Sun, Moon, Info, HelpCircle } from 'lucide-react'
 import appIcon from '../../assets/app-icon.png'
 import { cn } from '../../lib/utils'
 import { useThemeStore } from '../../store/themeStore'
@@ -7,12 +7,14 @@ import { useThemeStore } from '../../store/themeStore'
 interface Props {
   hofCount?: number
   urgentCount?: number
+  /** Optional callback wired to a "Help" button at the bottom of the sidebar. */
+  onShowTour?: () => void
 }
 
 const navItems = [
   { to: '/dashboard', label: 'Dashboard', Icon: Gauge },
   { to: '/board', label: 'Board', Icon: Columns3 },
-  { to: '/timeline', label: 'Timeline', Icon: Clock },
+  { to: '/calendar', label: 'Calendar', Icon: CalendarDays },
   { to: '/hof', label: 'Hall of Fame', Icon: Trophy },
   { to: '/settings', label: 'Settings', Icon: Settings }
 ] as const
@@ -21,7 +23,7 @@ const NAV_BASE = 'relative flex flex-col items-center gap-1 w-[76px] py-2 rounde
 const NAV_INACTIVE = 'text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground'
 const NAV_ACTIVE = 'bg-sidebar-accent text-sidebar-accent-foreground'
 
-export function Sidebar({ hofCount = 0, urgentCount = 0 }: Props) {
+export function Sidebar({ hofCount = 0, urgentCount = 0, onShowTour }: Props) {
   const { theme, toggle } = useThemeStore()
 
   return (
@@ -58,6 +60,16 @@ export function Sidebar({ hofCount = 0, urgentCount = 0 }: Props) {
 
       {/* Spacer + bottom items */}
       <div className="mt-auto" />
+      {onShowTour && (
+        <button
+          onClick={onShowTour}
+          title="Take a quick tour of CVEase features"
+          className={cn(NAV_BASE, NAV_INACTIVE)}
+        >
+          <HelpCircle className="w-5 h-5" />
+          <span className="text-[11px] leading-none">Help</span>
+        </button>
+      )}
       <NavLink
         to="/about"
         title="About"

@@ -30,71 +30,7 @@ export function ActionItemsGrid({
 }: Props) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      {/* Overdue deadlines */}
-      <div>
-        <h3 className="text-sm font-semibold mb-3 flex items-center gap-2 text-red-400">
-          <AlertCircle className="w-4 h-4" />
-          Overdue Disclosure Dates
-          {overdueDeadlines.length > 0 && (
-            <span className="text-xs bg-red-500/20 px-1.5 py-0.5 rounded">{overdueDeadlines.length}</span>
-          )}
-        </h3>
-        {overdueDeadlines.length === 0 ? (
-          <p className="text-xs text-muted-foreground italic">No overdue disclosure dates.</p>
-        ) : (
-          <div className="space-y-2">
-            {overdueDeadlines.map(({ cve, vendor, swimlane }) => {
-              const days = Math.abs(daysUntil(cve.disclosure_deadline)!)
-              return (
-                <ActionCard
-                  key={cve.id}
-                  cve={cve}
-                  icon={<AlertCircle className="w-4 h-4 text-red-400" />}
-                  accent="border-l-red-500"
-                  detail={`${days}d past disclosure date (${formatDate(cve.disclosure_deadline)})`}
-                  onClick={() => onOpen(cve.id)}
-                  vendor={vendor}
-                  swimlane={swimlane}
-                />
-              )
-            })}
-          </div>
-        )}
-      </div>
-
-      {/* Approaching deadlines */}
-      <div>
-        <h3 className="text-sm font-semibold mb-3 flex items-center gap-2 text-yellow-400">
-          <Clock className="w-4 h-4" />
-          Approaching Disclosure Dates
-          {approachingDeadlines.length > 0 && (
-            <span className="text-xs bg-yellow-500/20 px-1.5 py-0.5 rounded">{approachingDeadlines.length}</span>
-          )}
-        </h3>
-        {approachingDeadlines.length === 0 ? (
-          <p className="text-xs text-muted-foreground italic">No approaching disclosure dates.</p>
-        ) : (
-          <div className="space-y-2">
-            {approachingDeadlines.map(({ cve, vendor, swimlane }) => {
-              const days = daysUntil(cve.disclosure_deadline)!
-              return (
-                <ActionCard
-                  key={cve.id}
-                  cve={cve}
-                  icon={<Clock className="w-4 h-4 text-yellow-400" />}
-                  accent="border-l-yellow-500"
-                  detail={`${days}d until disclosure (${formatDate(cve.disclosure_deadline)})`}
-                  onClick={() => onOpen(cve.id)}
-                  vendor={vendor}
-                  swimlane={swimlane}
-                />
-              )
-            })}
-          </div>
-        )}
-      </div>
-
-      {/* Follow-ups overdue + upcoming */}
+      {/* Follow-ups (actionable — surface first) */}
       <div>
         <h3 className="text-sm font-semibold mb-3 flex items-center gap-2 text-sky-400">
           <BellRing className="w-4 h-4" />
@@ -166,6 +102,70 @@ export function ActionItemsGrid({
                 swimlane={swimlane}
               />
             ))}
+          </div>
+        )}
+      </div>
+
+      {/* Overdue deadlines (informational — past their actionable window) */}
+      <div>
+        <h3 className="text-sm font-semibold mb-3 flex items-center gap-2 text-red-400">
+          <AlertCircle className="w-4 h-4" />
+          Overdue Disclosure Dates
+          {overdueDeadlines.length > 0 && (
+            <span className="text-xs bg-red-500/20 px-1.5 py-0.5 rounded">{overdueDeadlines.length}</span>
+          )}
+        </h3>
+        {overdueDeadlines.length === 0 ? (
+          <p className="text-xs text-muted-foreground italic">No overdue disclosure dates.</p>
+        ) : (
+          <div className="space-y-2">
+            {overdueDeadlines.map(({ cve, vendor, swimlane }) => {
+              const days = Math.abs(daysUntil(cve.disclosure_deadline)!)
+              return (
+                <ActionCard
+                  key={cve.id}
+                  cve={cve}
+                  icon={<AlertCircle className="w-4 h-4 text-red-400" />}
+                  accent="border-l-red-500"
+                  detail={`${days}d past disclosure date (${formatDate(cve.disclosure_deadline)})`}
+                  onClick={() => onOpen(cve.id)}
+                  vendor={vendor}
+                  swimlane={swimlane}
+                />
+              )
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Approaching deadlines */}
+      <div>
+        <h3 className="text-sm font-semibold mb-3 flex items-center gap-2 text-yellow-400">
+          <Clock className="w-4 h-4" />
+          Approaching Disclosure Dates
+          {approachingDeadlines.length > 0 && (
+            <span className="text-xs bg-yellow-500/20 px-1.5 py-0.5 rounded">{approachingDeadlines.length}</span>
+          )}
+        </h3>
+        {approachingDeadlines.length === 0 ? (
+          <p className="text-xs text-muted-foreground italic">No approaching disclosure dates.</p>
+        ) : (
+          <div className="space-y-2">
+            {approachingDeadlines.map(({ cve, vendor, swimlane }) => {
+              const days = daysUntil(cve.disclosure_deadline)!
+              return (
+                <ActionCard
+                  key={cve.id}
+                  cve={cve}
+                  icon={<Clock className="w-4 h-4 text-yellow-400" />}
+                  accent="border-l-yellow-500"
+                  detail={`${days}d until disclosure (${formatDate(cve.disclosure_deadline)})`}
+                  onClick={() => onOpen(cve.id)}
+                  vendor={vendor}
+                  swimlane={swimlane}
+                />
+              )
+            })}
           </div>
         )}
       </div>

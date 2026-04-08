@@ -54,7 +54,9 @@ contextBridge.exposeInMainWorld('api', {
   },
   db: {
     backup: () => ipcRenderer.invoke('db:backup'),
-    restore: () => ipcRenderer.invoke('db:restore')
+    restore: () => ipcRenderer.invoke('db:restore'),
+    purgeCVEData: () => ipcRenderer.invoke('db:purgeCVEData'),
+    purgeAll: () => ipcRenderer.invoke('db:purgeAll')
   },
   attachment: {
     list: (cveId: string) => ipcRenderer.invoke('attachment:list', cveId),

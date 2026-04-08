@@ -3,7 +3,7 @@ import Database from 'better-sqlite3'
 import { v4 as uuidv4 } from 'uuid'
 import { runMigrations } from './migrations'
 
-const EXPECTED_VERSION = 13
+const EXPECTED_VERSION = 15
 
 const EXPECTED_TABLES = [
   'schema_version',
@@ -89,6 +89,11 @@ describe('database migrations', () => {
     expect(columnNames(db, 'vendors')).toContain('has_bounty_program')
     // v12: bounty_in_scope
     expect(columnNames(db, 'swimlanes')).toContain('bounty_in_scope')
+    // v14: cvss_vector + cwe_id
+    expect(columnNames(db, 'cves')).toContain('cvss_vector')
+    expect(columnNames(db, 'cves')).toContain('cwe_id')
+    // v15: tags
+    expect(columnNames(db, 'cves')).toContain('tags')
   })
 
   it('rejects the removed "Awaiting Response" stage (migration v9 enforced)', () => {

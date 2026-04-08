@@ -87,6 +87,9 @@ function initialValues(cve: CVE | undefined, swimlaneId: string | undefined): CV
     date_disclosed: cve.date_disclosed ?? '',
     affected_component: cve.affected_component ?? '',
     affected_versions: cve.affected_versions ?? '',
+    cvss_vector: cve.cvss_vector ?? '',
+    cwe_id: cve.cwe_id ?? '',
+    tags: cve.tags ?? '',
     patch_status: cve.patch_status,
     patch_url: cve.patch_url ?? '',
     escalated_to_vince: cve.escalated_to_vince === 1,
@@ -193,6 +196,9 @@ export function CVEForm({ open, onOpenChange, swimlaneId, cve }: Props) {
         date_disclosed: values.date_disclosed || null,
         affected_component: values.affected_component.trim() || null,
         affected_versions: values.affected_versions.trim() || null,
+        cvss_vector: values.cvss_vector.trim() || null,
+        cwe_id: values.cwe_id.trim() || null,
+        tags: values.tags.trim() || null,
         patch_status: values.patch_status,
         patch_url: values.patch_url.trim() || null,
         escalated_to_vince: values.escalated_to_vince,
@@ -227,6 +233,9 @@ export function CVEForm({ open, onOpenChange, swimlaneId, cve }: Props) {
       date_disclosed: values.date_disclosed || undefined,
       affected_component: values.affected_component.trim() || undefined,
       affected_versions: values.affected_versions.trim() || undefined,
+      cvss_vector: values.cvss_vector.trim() || undefined,
+      cwe_id: values.cwe_id.trim() || undefined,
+      tags: values.tags.trim() || undefined,
       cve_eligible: values.cve_eligible
     }
     const created = await addCVE(data)
