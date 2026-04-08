@@ -1,7 +1,14 @@
 import { create } from 'zustand'
+import { persist, createJSONStorage } from 'zustand/middleware'
 import type { CVE, Vendor, Swimlane, Stage, Severity } from '../types/cve'
 import { api } from '../lib/ipc'
 import { STAGES } from '../lib/constants'
+
+// Only the three keys below survive a window reload — server-derived data
+// (vendors / swimlanes / cves / archived / archiveEligible) is reloaded
+// from the DB on every launch by `loadBoard()`, so persisting it would
+// just risk showing a stale snapshot on the next start.
+type PersistedSlice = Pick<BoardState, 'collapsedVendors' | 'severityFilter' | 'hideEmptyLanes'>
 
 interface BoardState {
   demoActive: boolean
@@ -59,7 +66,9 @@ interface BoardState {
   optimisticMove: (id: string, newStage: Stage, newSwimlaneId: string, targetIndex: number) => void
 }
 
-export const useBoardStore = create<BoardState>((set, get) => ({
+export const useBoardStore = create<BoardState>()(
+  persist(
+    (set, get) => ({
   demoActive: (() => { try { return localStorage.getItem('cvease-demo-active') === '1' } catch { return false } })(),
   vendors: [],
   swimlanes: [],
@@ -272,7 +281,37 @@ export const useBoardStore = create<BoardState>((set, get) => ({
       return { cves: [...rest, ...sourceCves, ...updatedDestCards] }
     })
   }
-}))
+}),
+    {
+      name: 'cvease-ui-state',
+      // Only the UI prefs survive a reload — see PersistedSlice above.
+      partialize: (state): PersistedSlice => ({
+        collapsedVendors: state.collapsedVendors,
+        severityFilter: state.severityFilter,
+        hideEmptyLanes: state.hideEmptyLanes
+      }),
+      // Set<string> doesn't survive JSON.stringify, so we serialise it as
+      // an array on the way out and rehydrate on the way in.
+      storage: createJSONStorage(() => localStorage, {
+        replacer: (_key, value) => (value instanceof Set ? Array.from(value) : value),
+        reviver: (key, value) =>
+          key === 'collapsedVendors' && Array.isArray(value)
+            ? new Set(value as string[])
+            : value
+      }),
+      // If we ever change the persisted shape, bumping this number will
+      // invalidate older snapshots cleanly instead of crashing on rehydrate.
+      version: 1,
+      // Defensive: if the on-disk shape is malformed (manual edit, future
+      // refactor) fall back to defaults rather than throwing during rehydrate.
+      onRehydrateStorage: () => (_state, error) => {
+        if (error) {
+          console.warn('Failed to rehydrate UI state, using defaults:', error)
+        }
+      }
+    }
+  )
+)
 
 // Convenience: get all stages for a swimlane (used in board rendering)
 export { STAGES }

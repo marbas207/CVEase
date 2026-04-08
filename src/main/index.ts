@@ -1,8 +1,46 @@
-import { app, shell, BrowserWindow } from 'electron'
+import { app, shell, BrowserWindow, session } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
+import log from 'electron-log/main'
 import { initDatabase } from './db/database'
 import { registerAllHandlers } from './ipc'
+
+// File-backed logging. Writes to:
+//   Windows: %APPDATA%/cvease/logs/main.log
+//   macOS:   ~/Library/Logs/cvease/main.log
+//   Linux:   ~/.config/cvease/logs/main.log
+//
+// `initialize()` wires renderer-side logging through IPC; `console.log` calls
+// in any main-process code will now also land in the file. Useful when a
+// packaged build crashes and the user can't easily produce a stack trace.
+log.initialize()
+log.transports.file.level = 'info'
+log.transports.console.level = is.dev ? 'debug' : 'info'
+log.transports.file.maxSize = 5 * 1024 * 1024 // 5 MB before rotation
+Object.assign(console, log.functions)
+
+log.info('---')
+log.info(`CVEase starting (${app.getVersion()}, electron ${process.versions.electron}, ${is.dev ? 'dev' : 'prod'})`)
+log.info(`log file: ${log.transports.file.getFile().path}`)
+
+process.on('uncaughtException', (err) => {
+  log.error('uncaughtException:', err)
+})
+process.on('unhandledRejection', (reason) => {
+  log.error('unhandledRejection:', reason)
+})
+
+const PROD_CSP = [
+  "default-src 'self'",
+  "script-src 'self'",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data:",
+  "font-src 'self' data:",
+  "connect-src 'self'",
+  "object-src 'none'",
+  "base-uri 'none'",
+  "frame-ancestors 'none'"
+].join('; ')
 
 function createWindow(): void {
   // In dev: build/icon.ico relative to project root
@@ -23,7 +61,10 @@ function createWindow(): void {
     titleBarStyle: 'hiddenInset',
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
-      sandbox: false
+      sandbox: true,
+      contextIsolation: true,
+      nodeIntegration: false,
+      webSecurity: true
     }
   })
 
@@ -49,10 +90,41 @@ app.whenReady().then(() => {
     optimizer.watchWindowShortcuts(window)
   })
 
+  // Apply a strict CSP in production. In dev, electron-vite's HMR needs
+  // websocket + inline-eval support, so the meta tag is omitted there.
+  if (!is.dev) {
+    session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+      callback({
+        responseHeaders: {
+          ...details.responseHeaders,
+          'Content-Security-Policy': [PROD_CSP]
+        }
+      })
+    })
+  }
+
+  // Refuse navigation away from the app's own pages.
+  app.on('web-contents-created', (_e, contents) => {
+    contents.on('will-navigate', (event, url) => {
+      const parsed = new URL(url)
+      const isDevServer =
+        is.dev &&
+        process.env['ELECTRON_RENDERER_URL'] &&
+        url.startsWith(process.env['ELECTRON_RENDERER_URL'])
+      if (parsed.protocol !== 'file:' && !isDevServer) {
+        event.preventDefault()
+        shell.openExternal(url)
+      }
+    })
+  })
+
   // Initialize DB after app is ready (userData path available)
+  log.info('initializing database')
   initDatabase()
+  log.info('registering IPC handlers')
   registerAllHandlers()
 
+  log.info('creating main window')
   createWindow()
 
   app.on('activate', function () {

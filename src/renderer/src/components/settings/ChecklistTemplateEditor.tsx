@@ -3,7 +3,7 @@ import { api } from '../../lib/ipc'
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
 import { Separator } from '../ui/separator'
-import { Plus, Trash2, GripVertical, ArrowRight, Lock, Pencil, Check, X } from 'lucide-react'
+import { Plus, Trash2, ArrowRight, Lock, Pencil, Check, X } from 'lucide-react'
 import { cn } from '../../lib/utils'
 import type { ChecklistTemplateItem } from '../../types/cve'
 

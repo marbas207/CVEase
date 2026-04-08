@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -23,6 +23,7 @@ import { api } from '../../lib/ipc'
 import { cn } from '../../lib/utils'
 import { ACTIVITY_TYPES, ACTIVITY_ICONS } from '../../lib/constants'
 import type { ActivityType } from '../../types/cve'
+import { EscalationPrompt } from './EscalationPrompt'
 
 const DAY_CHIPS = [
   { label: '7 days', days: 7 },
@@ -50,6 +51,26 @@ export function FollowupActionModal({ open, onOpenChange, cveId }: Props) {
   const [note, setNote] = useState('')
   const [nextFollowup, setNextFollowup] = useState('')
   const [saving, setSaving] = useState(false)
+  // Count of follow-ups already logged before this one. Drives the escalation
+  // nudge — once the user has logged at least one prior, the next one is
+  // their second and the banner appears.
+  const [priorFollowupCount, setPriorFollowupCount] = useState(0)
+
+  useEffect(() => {
+    if (!open) return
+    let cancelled = false
+    api.followup
+      .list(cveId)
+      .then((list) => {
+        if (!cancelled) setPriorFollowupCount(list.length)
+      })
+      .catch(() => {
+        if (!cancelled) setPriorFollowupCount(0)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [open, cveId])
 
   if (!cve) return null
 
@@ -192,6 +213,8 @@ export function FollowupActionModal({ open, onOpenChange, cveId }: Props) {
               </p>
             )}
           </div>
+
+          <EscalationPrompt cve={cve} priorFollowupCount={priorFollowupCount} />
         </div>
 
         <DialogFooter>

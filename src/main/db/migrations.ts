@@ -1,7 +1,5 @@
 import Database from 'better-sqlite3'
 
-const CURRENT_VERSION = 12
-
 const SCHEMA_V1 = `
 CREATE TABLE IF NOT EXISTS schema_version (
   version     INTEGER PRIMARY KEY,
@@ -373,5 +371,38 @@ export function runMigrations(db: Database.Database): void {
   if (currentVersion < 12) {
     addColumn(db, 'swimlanes', 'bounty_in_scope', 'INTEGER NOT NULL DEFAULT 0')
     db.prepare('INSERT INTO schema_version (version) VALUES (?)').run(12)
+  }
+
+  if (currentVersion < 13) {
+    // Enforce uniqueness on cves.cve_id when it isn't NULL. SQLite's partial
+    // unique index lets multiple rows have NULL cve_id (the common state for
+    // pre-disclosure entries) while preventing two rows from claiming the
+    // same real CVE identifier.
+    //
+    // Pre-flight: if the existing data already contains duplicates, fail
+    // loudly with a useful list rather than letting CREATE INDEX throw an
+    // opaque "UNIQUE constraint failed" message.
+    const dupes = db
+      .prepare(
+        `SELECT cve_id, COUNT(*) as n
+         FROM cves
+         WHERE cve_id IS NOT NULL AND cve_id != ''
+         GROUP BY cve_id
+         HAVING n > 1`
+      )
+      .all() as { cve_id: string; n: number }[]
+
+    if (dupes.length > 0) {
+      const list = dupes.map((d) => `${d.cve_id} (×${d.n})`).join(', ')
+      throw new Error(
+        `Migration v13 aborted: cannot enforce UNIQUE on cves.cve_id because the database contains duplicate IDs: ${list}. ` +
+          'Resolve the duplicates manually before restarting the app.'
+      )
+    }
+
+    db.exec(
+      'CREATE UNIQUE INDEX IF NOT EXISTS idx_cves_cve_id_unique ON cves(cve_id) WHERE cve_id IS NOT NULL'
+    )
+    db.prepare('INSERT INTO schema_version (version) VALUES (?)').run(13)
   }
 }

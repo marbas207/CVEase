@@ -8,7 +8,7 @@ import { useDeadlineStatus } from '../hooks/useDeadlineStatus'
 import { cn } from '../lib/utils'
 import { ChevronDown, ChevronRight, Layers, Columns3 } from 'lucide-react'
 import { STAGES } from '../lib/constants'
-import type { CVE, Swimlane, Stage } from '../types/cve'
+import type { CVE, Stage } from '../types/cve'
 
 const STAGE_DOT: Record<Stage, string> = {
   'Discovery': 'bg-slate-500',

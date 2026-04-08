@@ -101,6 +101,17 @@ export function KanbanBoard() {
       if (targetIndex === -1) targetIndex = destCards.length
     }
 
+    // Block cross-product moves. CVEs are tied to a single product, and a
+    // stray drag across rows would silently re-tag the CVE to a different
+    // vendor/product. The StageColumn already greys out invalid targets
+    // and disables their droppable; this is the belt-and-suspenders check
+    // for any drop that slipped past (e.g. when overId is another card's id).
+    if (destSwimlaneId !== draggedCVE.swimlane_id) {
+      setMoveError('Cannot move a CVE to a different product. Edit the CVE if you need to re-assign it.')
+      rollbackDrag()
+      return
+    }
+
     // Block moving to CVE Requested if not CVE eligible
     if (destStage === 'CVE Requested' && draggedCVE.cve_eligible === 0) {
       setMoveError('Cannot move to CVE Requested: this vulnerability is marked as not CVE eligible.')
@@ -108,10 +119,16 @@ export function KanbanBoard() {
       return
     }
 
+    const reportMoveFailure = (e: unknown) => {
+      console.error('Move failed, rolling back', e)
+      setMoveError(`Move failed: ${e instanceof Error ? e.message : String(e)}`)
+      rollbackDrag()
+    }
+
     // If same stage, just reorder (no transition modal needed)
     if (draggedCVE.stage === destStage && draggedCVE.swimlane_id === destSwimlaneId) {
       optimisticMove(draggedCVE.id, destStage, destSwimlaneId, targetIndex)
-      moveCVE(draggedCVE.id, destStage, destSwimlaneId, targetIndex).catch(() => rollbackDrag())
+      moveCVE(draggedCVE.id, destStage, destSwimlaneId, targetIndex).catch(reportMoveFailure)
       return
     }
 
@@ -123,7 +140,7 @@ export function KanbanBoard() {
     } else {
       // No requirements — commit immediately
       optimisticMove(draggedCVE.id, destStage, destSwimlaneId, targetIndex)
-      moveCVE(draggedCVE.id, destStage, destSwimlaneId, targetIndex).catch(() => rollbackDrag())
+      moveCVE(draggedCVE.id, destStage, destSwimlaneId, targetIndex).catch(reportMoveFailure)
       if (destStage === 'Published') firePublishedConfetti()
     }
   }
@@ -154,6 +171,7 @@ export function KanbanBoard() {
       }
     } catch (e) {
       console.error('Transition failed, rolling back', e)
+      setMoveError(`Move failed: ${e instanceof Error ? e.message : String(e)}`)
       rollbackDrag()
     }
   }

@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react'
+import { useForm, FormProvider, type SubmitHandler } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 import {
   Dialog,
   DialogContent,
@@ -8,24 +10,32 @@ import {
   DialogDescription
 } from '../ui/dialog'
 import { Button } from '../ui/button'
-import { Input } from '../ui/input'
-import { Label } from '../ui/label'
-import { Textarea } from '../ui/textarea'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from '../ui/select'
 import { useBoardStore } from '../../store/boardStore'
+import { api } from '../../lib/ipc'
 import { calcDeadline } from '../../lib/utils'
-import { STAGES, SEVERITIES, STAGE_ORDER } from '../../lib/constants'
+import { STAGE_ORDER } from '../../lib/constants'
+import { CVEFormValues, CVE_FORM_DEFAULTS } from '../../../../shared/schemas/cve'
+import type { CVE, Stage, CreateCVEInput, UpdateCVEInput } from '../../types/cve'
+import { VendorProductPicker } from './form/VendorProductPicker'
+import { CoreFieldsSection } from './form/CoreFieldsSection'
+import { VendorContactSection } from './form/VendorContactSection'
+import { NegotiationSection } from './form/NegotiationSection'
+import { CveRequestedSection } from './form/CveRequestedSection'
+import { PublishedSection } from './form/PublishedSection'
+import { AttachmentsStaging } from './form/AttachmentsStaging'
 
-// Which stage index the CVE is at (for showing/hiding form sections)
 function stageIdx(s: Stage): number { return STAGE_ORDER[s] ?? 0 }
-import type { CVE, Stage, Severity, PatchStatus, BountyStatus, CreateCVEInput, UpdateCVEInput } from '../../types/cve'
 
+function basename(p: string): string {
+  const parts = p.split(/[/\\]/)
+  return parts[parts.length - 1] || p
+}
+
+/**
+ * Walk the form forward through stage milestones based on which dates and
+ * IDs the user just supplied. Mirrors the legacy behavior — only ever
+ * advances; never backs the stage off.
+ */
 function autoAdvanceStage(
   currentStage: Stage,
   prevVendorNotified: string | null | undefined,
@@ -36,188 +46,209 @@ function autoAdvanceStage(
   newDateDisclosed: string
 ): Stage {
   let stage = currentStage
-
-  // Setting vendor notified for first time → advance to Vendor Contacted (if still in Discovery)
   if (newVendorNotified && !prevVendorNotified && STAGE_ORDER[stage] < STAGE_ORDER['Vendor Contacted']) {
     stage = 'Vendor Contacted'
   }
-
-  // Assigning a CVE ID for first time → advance to CVE Requested (if not already past it)
   if (newCveId && !prevCveId && STAGE_ORDER[stage] < STAGE_ORDER['CVE Requested']) {
     stage = 'CVE Requested'
   }
-
-  // Setting disclosed date → advance to Published
   if (newDateDisclosed && !prevDateDisclosed && STAGE_ORDER[stage] < STAGE_ORDER['Published']) {
     stage = 'Published'
   }
-
   return stage
 }
 
 interface Props {
   open: boolean
   onOpenChange: (open: boolean) => void
-  swimlaneId?: string   // for create mode
-  cve?: CVE             // for edit mode
+  swimlaneId?: string
+  cve?: CVE
+}
+
+/** Build initial form values for a given CVE row (edit) or empty form (create). */
+function initialValues(cve: CVE | undefined, swimlaneId: string | undefined): CVEFormValues {
+  if (!cve) {
+    return { ...CVE_FORM_DEFAULTS, swimlane_id: swimlaneId ?? '' }
+  }
+  return {
+    swimlane_id: cve.swimlane_id,
+    title: cve.title,
+    severity: cve.severity,
+    stage: cve.stage,
+    cve_id: cve.cve_id ?? '',
+    description: cve.description ?? '',
+    vendor_contact_name: cve.vendor_contact_name ?? '',
+    vendor_contact_email: cve.vendor_contact_email ?? '',
+    vendor_contact_other: cve.vendor_contact_other ?? '',
+    date_discovered: cve.date_discovered ?? '',
+    date_vendor_notified: cve.date_vendor_notified ?? '',
+    disclosure_deadline: cve.disclosure_deadline ?? '',
+    date_cve_requested: cve.date_cve_requested ?? '',
+    date_disclosed: cve.date_disclosed ?? '',
+    affected_component: cve.affected_component ?? '',
+    affected_versions: cve.affected_versions ?? '',
+    patch_status: cve.patch_status,
+    patch_url: cve.patch_url ?? '',
+    escalated_to_vince: cve.escalated_to_vince === 1,
+    vince_case_id: cve.vince_case_id ?? '',
+    cve_eligible: cve.cve_eligible ?? 1,
+    bounty_eligible: cve.bounty_eligible ?? null,
+    bounty_status: cve.bounty_status,
+    bounty_amount: cve.bounty_amount ?? '',
+    bounty_paid_date: cve.bounty_paid_date ?? '',
+    bounty_url: cve.bounty_url ?? ''
+  }
 }
 
 export function CVEForm({ open, onOpenChange, swimlaneId, cve }: Props) {
-  const { addCVE, updateCVE, getVendorForSwimlane, swimlanes, vendors } = useBoardStore()
+  const { addCVE, updateCVE, getVendorForSwimlane, swimlanes } = useBoardStore()
   const isEdit = !!cve
 
-  const [selectedVendorId, setSelectedVendorId] = useState('')
-  const [selectedSwimlaneId, setSelectedSwimlaneId] = useState(swimlaneId ?? '')
-  const [title, setTitle] = useState('')
-  const [severity, setSeverity] = useState<Severity>('High')
-  const [stage, setStage] = useState<Stage>('Discovery')
-  const [cveId, setCveId] = useState('')
-  const [description, setDescription] = useState('')
-  const [contactName, setContactName] = useState('')
-  const [contactEmail, setContactEmail] = useState('')
-  const [contactOther, setContactOther] = useState('')
-  const [dateDiscovered, setDateDiscovered] = useState('')
-  const [dateVendorNotified, setDateVendorNotified] = useState('')
-  const [dateCveRequested, setDateCveRequested] = useState('')
-  const [dateDisclosed, setDateDisclosed] = useState('')
-  const [disclosureDeadline, setDisclosureDeadline] = useState('')
-  const [affectedComponent, setAffectedComponent] = useState('')
-  const [affectedVersions, setAffectedVersions] = useState('')
-  const [patchStatus, setPatchStatus] = useState<PatchStatus>('unknown')
-  const [patchUrl, setPatchUrl] = useState('')
-  const [escalatedToVince, setEscalatedToVince] = useState(false)
-  const [vinceCaseId, setVinceCaseId] = useState('')
-  const [cveEligible, setCveEligible] = useState<number | null>(1)
-  const [bountyEligible, setBountyEligible] = useState<number | null>(null)
-  const [bountyStatus, setBountyStatus] = useState<BountyStatus>('none')
-  const [bountyAmount, setBountyAmount] = useState('')
-  const [bountyPaidDate, setBountyPaidDate] = useState('')
-  const [bountyUrl, setBountyUrl] = useState('')
-  const [saving, setSaving] = useState(false)
+  const form = useForm<CVEFormValues>({
+    resolver: zodResolver(CVEFormValues),
+    defaultValues: initialValues(cve, swimlaneId),
+    mode: 'onBlur'
+  })
+  const { handleSubmit, reset, watch, setValue, formState: { isSubmitting } } = form
 
-  // Auto-fill deadline from vendor notified + 90 days if not manually set
-  const autoDeadline = calcDeadline(dateVendorNotified)
-  const effectiveDeadline = disclosureDeadline || autoDeadline || ''
+  // Attachments staged during a new-CVE flow.
+  const [pendingAttachments, setPendingAttachments] = useState<string[]>([])
+  const [attachmentError, setAttachmentError] = useState<string | null>(null)
 
-  const resolvedSwimlaneId = swimlaneId ?? selectedSwimlaneId
+  const watchedSwimlaneId = watch('swimlane_id')
+  const watchedStage = watch('stage')
+  const watchedCveEligible = watch('cve_eligible')
 
-  // When swimlane changes in create mode, re-fill vendor contacts
-  useEffect(() => {
-    if (!cve && resolvedSwimlaneId) {
-      const vendor = getVendorForSwimlane(resolvedSwimlaneId)
-      setContactName(vendor?.security_contact_name ?? '')
-      setContactEmail(vendor?.security_contact_email ?? '')
-      setContactOther(vendor?.security_contact_other ?? '')
-      const lane = swimlanes.find(s => s.id === resolvedSwimlaneId)
-      if (lane?.bounty_in_scope === 1) setBountyEligible(1)
-      else if (vendor?.has_bounty_program === 1) setBountyEligible(null) // vendor has program but product scope unknown
-      else setBountyEligible(null)
-    }
-  }, [resolvedSwimlaneId]) // eslint-disable-line react-hooks/exhaustive-deps
-
+  // Reset whenever the dialog opens or the underlying CVE changes.
   useEffect(() => {
     if (open) {
-      setSelectedVendorId('')
-      setSelectedSwimlaneId(swimlaneId ?? '')
-      setTitle(cve?.title ?? '')
-      setSeverity(cve?.severity ?? 'High')
-      setStage(cve?.stage ?? 'Discovery')
-      setCveId(cve?.cve_id ?? '')
-      setDescription(cve?.description ?? '')
-      if (cve) {
-        setContactName(cve.vendor_contact_name ?? '')
-        setContactEmail(cve.vendor_contact_email ?? '')
-        setContactOther(cve.vendor_contact_other ?? '')
-      }
-      setDateDiscovered(cve?.date_discovered ?? '')
-      setDateVendorNotified(cve?.date_vendor_notified ?? '')
-      setDateCveRequested(cve?.date_cve_requested ?? '')
-      setDateDisclosed(cve?.date_disclosed ?? '')
-      setDisclosureDeadline(cve?.disclosure_deadline ?? '')
-      setAffectedComponent(cve?.affected_component ?? '')
-      setAffectedVersions(cve?.affected_versions ?? '')
-      setPatchStatus((cve?.patch_status as PatchStatus) ?? 'unknown')
-      setPatchUrl(cve?.patch_url ?? '')
-      setEscalatedToVince(cve?.escalated_to_vince === 1)
-      setVinceCaseId(cve?.vince_case_id ?? '')
-      setCveEligible(cve?.cve_eligible ?? 1)
-      setBountyEligible(cve?.bounty_eligible ?? null)
-      setBountyStatus((cve?.bounty_status as BountyStatus) ?? 'none')
-      setBountyAmount(cve?.bounty_amount ?? '')
-      setBountyPaidDate(cve?.bounty_paid_date ?? '')
-      setBountyUrl(cve?.bounty_url ?? '')
+      reset(initialValues(cve, swimlaneId))
+      setPendingAttachments([])
+      setAttachmentError(null)
     }
-  }, [open, cve])
+  }, [open, cve, swimlaneId, reset])
 
-  const handleSave = async () => {
-    if (!title.trim() || (!isEdit && !resolvedSwimlaneId)) return
-    setSaving(true)
+  // Auto-fill vendor contact + bounty fields when the swimlane changes in
+  // create mode. Edit mode leaves the existing values alone.
+  useEffect(() => {
+    if (cve || !watchedSwimlaneId) return
+    const vendor = getVendorForSwimlane(watchedSwimlaneId)
+    setValue('vendor_contact_name', vendor?.security_contact_name ?? '')
+    setValue('vendor_contact_email', vendor?.security_contact_email ?? '')
+    setValue('vendor_contact_other', vendor?.security_contact_other ?? '')
+    const lane = swimlanes.find((s) => s.id === watchedSwimlaneId)
+    setValue('bounty_eligible', lane?.bounty_in_scope === 1 ? 1 : null)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [watchedSwimlaneId])
+
+  const handleAddAttachments = async () => {
+    setAttachmentError(null)
     try {
-      if (isEdit && cve) {
-        const resolvedStage = autoAdvanceStage(
-          stage,
-          cve.date_vendor_notified,
-          dateVendorNotified,
-          cve.cve_id,
-          cveId.trim(),
-          cve.date_disclosed,
-          dateDisclosed
-        )
-
-        const data: UpdateCVEInput = {
-          title: title.trim(),
-          severity,
-          stage: resolvedStage,
-          cve_id: cveId.trim() || null,
-          description: description.trim() || null,
-          vendor_contact_name: contactName.trim() || null,
-          vendor_contact_email: contactEmail.trim() || null,
-          vendor_contact_other: contactOther.trim() || null,
-          date_discovered: dateDiscovered || null,
-          date_vendor_notified: dateVendorNotified || null,
-          disclosure_deadline: effectiveDeadline || null,
-          date_cve_requested: dateCveRequested || null,
-          date_disclosed: dateDisclosed || null,
-          affected_component: affectedComponent.trim() || null,
-          affected_versions: affectedVersions.trim() || null,
-          patch_status: patchStatus,
-          patch_url: patchUrl.trim() || null,
-          escalated_to_vince: escalatedToVince,
-          vince_case_id: vinceCaseId.trim() || null,
-          cve_eligible: cveEligible,
-          bounty_eligible: bountyEligible,
-          bounty_status: bountyStatus,
-          bounty_amount: bountyAmount.trim() || null,
-          bounty_paid_date: bountyPaidDate || null,
-          bounty_url: bountyUrl.trim() || null
-        }
-        await updateCVE(cve.id, data)
-      } else {
-        const data: CreateCVEInput = {
-          swimlane_id: resolvedSwimlaneId,
-          title: title.trim(),
-          severity,
-          stage,
-          cve_id: cveId.trim() || undefined,
-          description: description.trim() || undefined,
-          vendor_contact_name: contactName.trim() || undefined,
-          vendor_contact_email: contactEmail.trim() || undefined,
-          vendor_contact_other: contactOther.trim() || undefined,
-          date_discovered: dateDiscovered || undefined,
-          date_vendor_notified: dateVendorNotified || undefined,
-          disclosure_deadline: effectiveDeadline || undefined,
-          date_cve_requested: dateCveRequested || undefined,
-          date_disclosed: dateDisclosed || undefined,
-          affected_component: affectedComponent.trim() || undefined,
-          affected_versions: affectedVersions.trim() || undefined,
-          cve_eligible: cveEligible
-        }
-        await addCVE(data)
-      }
-      onOpenChange(false)
-    } finally {
-      setSaving(false)
+      const paths = await api.attachment.showPicker()
+      if (paths.length > 0) setPendingAttachments((prev) => [...prev, ...paths])
+    } catch (e) {
+      setAttachmentError(`Failed to pick files: ${e}`)
     }
+  }
+
+  const removePendingAttachment = (idx: number) => {
+    setPendingAttachments((prev) => prev.filter((_, i) => i !== idx))
+  }
+
+  const onSubmit: SubmitHandler<CVEFormValues> = async (values) => {
+    if (!isEdit && !values.swimlane_id) {
+      form.setError('swimlane_id', { message: 'Pick a vendor and product first' })
+      return
+    }
+
+    // Compute the effective deadline once, here in the parent. The
+    // VendorContactSection shows the auto value as a placeholder but the
+    // submit path is the source of truth for what gets persisted.
+    const effectiveDeadline = values.disclosure_deadline || calcDeadline(values.date_vendor_notified) || ''
+
+    if (isEdit && cve) {
+      const resolvedStage = autoAdvanceStage(
+        values.stage,
+        cve.date_vendor_notified,
+        values.date_vendor_notified,
+        cve.cve_id,
+        values.cve_id,
+        cve.date_disclosed,
+        values.date_disclosed
+      )
+
+      const data: UpdateCVEInput = {
+        title: values.title.trim(),
+        severity: values.severity,
+        stage: resolvedStage,
+        cve_id: values.cve_id.trim() || null,
+        description: values.description.trim() || null,
+        vendor_contact_name: values.vendor_contact_name.trim() || null,
+        vendor_contact_email: values.vendor_contact_email.trim() || null,
+        vendor_contact_other: values.vendor_contact_other.trim() || null,
+        date_discovered: values.date_discovered || null,
+        date_vendor_notified: values.date_vendor_notified || null,
+        disclosure_deadline: effectiveDeadline || null,
+        date_cve_requested: values.date_cve_requested || null,
+        date_disclosed: values.date_disclosed || null,
+        affected_component: values.affected_component.trim() || null,
+        affected_versions: values.affected_versions.trim() || null,
+        patch_status: values.patch_status,
+        patch_url: values.patch_url.trim() || null,
+        escalated_to_vince: values.escalated_to_vince,
+        vince_case_id: values.vince_case_id.trim() || null,
+        cve_eligible: values.cve_eligible,
+        bounty_eligible: values.bounty_eligible,
+        bounty_status: values.bounty_status,
+        bounty_amount: values.bounty_amount.trim() || null,
+        bounty_paid_date: values.bounty_paid_date || null,
+        bounty_url: values.bounty_url.trim() || null
+      }
+      await updateCVE(cve.id, data)
+      onOpenChange(false)
+      return
+    }
+
+    // Create mode
+    const data: CreateCVEInput = {
+      swimlane_id: values.swimlane_id,
+      title: values.title.trim(),
+      severity: values.severity,
+      stage: values.stage,
+      cve_id: values.cve_id.trim() || undefined,
+      description: values.description.trim() || undefined,
+      vendor_contact_name: values.vendor_contact_name.trim() || undefined,
+      vendor_contact_email: values.vendor_contact_email.trim() || undefined,
+      vendor_contact_other: values.vendor_contact_other.trim() || undefined,
+      date_discovered: values.date_discovered || undefined,
+      date_vendor_notified: values.date_vendor_notified || undefined,
+      disclosure_deadline: effectiveDeadline || undefined,
+      date_cve_requested: values.date_cve_requested || undefined,
+      date_disclosed: values.date_disclosed || undefined,
+      affected_component: values.affected_component.trim() || undefined,
+      affected_versions: values.affected_versions.trim() || undefined,
+      cve_eligible: values.cve_eligible
+    }
+    const created = await addCVE(data)
+
+    if (pendingAttachments.length > 0) {
+      const failures: string[] = []
+      for (const path of pendingAttachments) {
+        try {
+          await api.attachment.import(created.id, path)
+        } catch (e) {
+          failures.push(`${basename(path)}: ${e}`)
+        }
+      }
+      if (failures.length > 0) {
+        setAttachmentError(
+          `CVE created, but ${failures.length} attachment(s) failed to import:\n${failures.join('\n')}`
+        )
+        return
+      }
+    }
+
+    onOpenChange(false)
   }
 
   return (
@@ -230,285 +261,44 @@ export function CVEForm({ open, onOpenChange, swimlaneId, cve }: Props) {
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid gap-5 py-2">
-          {/* Vendor → Product picker (when not pre-set) */}
-          {!isEdit && !swimlaneId && (
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-1.5">
-                <Label>Vendor *</Label>
-                <Select value={selectedVendorId} onValueChange={v => { setSelectedVendorId(v); setSelectedSwimlaneId('') }}>
-                  <SelectTrigger><SelectValue placeholder="Select vendor..." /></SelectTrigger>
-                  <SelectContent>
-                    {vendors.map(v => (
-                      <SelectItem key={v.id} value={v.id}>
-                        {v.name}
-                        {v.is_cna === 1 && <span className="ml-1 text-[10px] font-bold text-primary bg-primary/10 rounded px-1 py-0.5">CNA</span>}
-                        {v.has_bounty_program === 1 && <span className="ml-1 text-[10px] font-bold text-green-500 bg-green-500/10 rounded px-1 py-0.5">Bounty</span>}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-1.5">
-                <Label>Software / Product *</Label>
-                <Select
-                  value={selectedSwimlaneId}
-                  onValueChange={setSelectedSwimlaneId}
-                  disabled={!selectedVendorId}
-                >
-                  <SelectTrigger><SelectValue placeholder={selectedVendorId ? 'Select product...' : 'Select vendor first'} /></SelectTrigger>
-                  <SelectContent>
-                    {swimlanes
-                      .filter(lane => lane.vendor_id === selectedVendorId)
-                      .map(lane => (
-                        <SelectItem key={lane.id} value={lane.id}>
-                          {lane.software_name}
-                          {lane.bounty_in_scope === 1 && <span className="ml-1 text-[10px] font-bold text-green-500 bg-green-500/10 rounded px-1 py-0.5">Bounty</span>}
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          )}
+        <FormProvider {...form}>
+          <form onSubmit={handleSubmit(onSubmit)} className="grid gap-5 py-2">
+            {!isEdit && !swimlaneId && <VendorProductPicker />}
 
-          {/* ── Always visible: core info ── */}
-          <div className="grid gap-1.5">
-            <Label htmlFor="cve-title">Title / Short Description *</Label>
-            <Input
-              id="cve-title"
-              value={title}
-              onChange={e => setTitle(e.target.value)}
-              placeholder="e.g. Remote Code Execution via unsanitized path"
-              autoFocus
-            />
-          </div>
+            <CoreFieldsSection isEdit={isEdit} />
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="grid gap-1.5">
-              <Label>Severity *</Label>
-              <Select value={severity} onValueChange={v => setSeverity(v as Severity)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {SEVERITIES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            {isEdit && (
-              <div className="grid gap-1.5">
-                <Label>Stage</Label>
-                <Select value={stage} onValueChange={v => setStage(v as Stage)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {STAGES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+            {stageIdx(watchedStage) >= stageIdx('Vendor Contacted') && <VendorContactSection />}
+
+            {stageIdx(watchedStage) >= stageIdx('Negotiating') && <NegotiationSection />}
+
+            {stageIdx(watchedStage) >= stageIdx('CVE Requested') && watchedCveEligible !== 0 && (
+              <CveRequestedSection />
+            )}
+
+            {stageIdx(watchedStage) >= stageIdx('Published') && <PublishedSection />}
+
+            {!isEdit && (
+              <AttachmentsStaging
+                pendingPaths={pendingAttachments}
+                onAddClick={handleAddAttachments}
+                onRemove={removePendingAttachment}
+              />
+            )}
+
+            {attachmentError && (
+              <div className="text-xs text-destructive whitespace-pre-wrap rounded-md border border-destructive/40 bg-destructive/10 p-2">
+                {attachmentError}
               </div>
             )}
-          </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="grid gap-1.5">
-              <Label htmlFor="cve-component">Affected Component / Location</Label>
-              <Input id="cve-component" value={affectedComponent} onChange={e => setAffectedComponent(e.target.value)} placeholder="e.g. Login page, /api/v1/admin" />
-            </div>
-            <div className="grid gap-1.5">
-              <Label htmlFor="cve-versions">Affected Versions</Label>
-              <Input id="cve-versions" value={affectedVersions} onChange={e => setAffectedVersions(e.target.value)} placeholder="e.g. 2.0-2.4, < 3.1.2, all" className="font-mono" />
-            </div>
-          </div>
-
-          <div className="grid gap-1.5">
-            <Label htmlFor="cve-desc">Reproduction Steps / Description</Label>
-            <Textarea
-              id="cve-desc"
-              value={description}
-              onChange={e => setDescription(e.target.value)}
-              placeholder="Detailed steps to reproduce the vulnerability, impact analysis..."
-              className="min-h-[100px] font-mono text-xs"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="grid gap-1.5">
-              <Label htmlFor="date-discovered">Date Discovered</Label>
-              <Input id="date-discovered" type="date" value={dateDiscovered} onChange={e => setDateDiscovered(e.target.value)} />
-            </div>
-            <div className="grid gap-1.5">
-              <Label>CVE Eligible</Label>
-              <Select value={String(cveEligible)} onValueChange={v => setCveEligible(v === 'null' ? null : Number(v))}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="1">Yes</SelectItem>
-                  <SelectItem value="0">No (bounty only)</SelectItem>
-                  <SelectItem value="null">Unknown</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          {/* ── Vendor Contacted+ : contact info & dates ── */}
-          {stageIdx(stage) >= stageIdx('Vendor Contacted') && (
-            <>
-              <div>
-                <p className="text-sm font-semibold mb-3">Vendor Contact</p>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="grid gap-1.5">
-                    <Label htmlFor="contact-name">Name</Label>
-                    <Input id="contact-name" value={contactName} onChange={e => setContactName(e.target.value)} placeholder="Security Team" />
-                  </div>
-                  <div className="grid gap-1.5">
-                    <Label htmlFor="contact-email">Email</Label>
-                    <Input id="contact-email" type="email" value={contactEmail} onChange={e => setContactEmail(e.target.value)} placeholder="security@vendor.com" />
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="grid gap-1.5">
-                  <Label htmlFor="date-notified">Date Vendor Notified</Label>
-                  <Input id="date-notified" type="date" value={dateVendorNotified} onChange={e => setDateVendorNotified(e.target.value)} />
-                </div>
-                <div className="grid gap-1.5">
-                  <Label htmlFor="date-deadline">Disclosure Deadline</Label>
-                  <Input id="date-deadline" type="date" value={effectiveDeadline} onChange={e => setDisclosureDeadline(e.target.value)} />
-                  {!disclosureDeadline && autoDeadline && (
-                    <p className="text-[11px] text-muted-foreground">Auto-set to 90 days from notification</p>
-                  )}
-                </div>
-              </div>
-
-              <div className="grid gap-1.5">
-                <Label>Bounty Eligible</Label>
-                <Select value={String(bountyEligible)} onValueChange={v => setBountyEligible(v === 'null' ? null : Number(v))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="null">Unknown</SelectItem>
-                    <SelectItem value="1">Yes</SelectItem>
-                    <SelectItem value="0">No</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </>
-          )}
-
-          {/* ── Negotiating+ : patch status, escalation ── */}
-          {stageIdx(stage) >= stageIdx('Negotiating') && (
-            <>
-              <div>
-                <p className="text-sm font-semibold mb-3">Patch Status</p>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="grid gap-1.5">
-                    <Label>Status</Label>
-                    <Select value={patchStatus} onValueChange={v => setPatchStatus(v as PatchStatus)}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="unknown">Unknown</SelectItem>
-                        <SelectItem value="no_patch">No Patch Available</SelectItem>
-                        <SelectItem value="patch_available">Patch Available</SelectItem>
-                        <SelectItem value="wont_fix">Won't Fix</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="grid gap-1.5">
-                    <Label htmlFor="patch-url">Patch / Advisory URL</Label>
-                    <Input id="patch-url" value={patchUrl} onChange={e => setPatchUrl(e.target.value)} placeholder="https://..." />
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <p className="text-sm font-semibold mb-3">Escalation</p>
-                <div className="flex items-center gap-3 mb-3">
-                  <button
-                    type="button"
-                    onClick={() => setEscalatedToVince(!escalatedToVince)}
-                    className={`relative w-9 h-5 rounded-full transition-colors ${escalatedToVince ? 'bg-primary' : 'bg-muted'}`}
-                  >
-                    <span className={`block w-4 h-4 rounded-full bg-white shadow transition-transform ${escalatedToVince ? 'translate-x-4' : 'translate-x-0.5'}`} />
-                  </button>
-                  <Label className="cursor-pointer" onClick={() => setEscalatedToVince(!escalatedToVince)}>
-                    Escalated to VINCE (CERT/CC)
-                  </Label>
-                </div>
-                {escalatedToVince && (
-                  <div className="grid gap-1.5">
-                    <Label htmlFor="vince-case">VINCE Case ID</Label>
-                    <Input id="vince-case" value={vinceCaseId} onChange={e => setVinceCaseId(e.target.value)} placeholder="VU#123456" className="font-mono" />
-                  </div>
-                )}
-              </div>
-            </>
-          )}
-
-          {/* ── CVE Requested+ : CVE ID, date requested ── */}
-          {stageIdx(stage) >= stageIdx('CVE Requested') && cveEligible !== 0 && (
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-1.5">
-                <Label htmlFor="cve-id">CVE ID</Label>
-                <Input id="cve-id" value={cveId} onChange={e => setCveId(e.target.value)} placeholder="CVE-2024-XXXXX" className="font-mono" />
-              </div>
-              <div className="grid gap-1.5">
-                <Label htmlFor="date-cve-req">Date CVE Requested</Label>
-                <Input id="date-cve-req" type="date" value={dateCveRequested} onChange={e => setDateCveRequested(e.target.value)} />
-              </div>
-            </div>
-          )}
-
-          {/* ── Published : disclosure date, bounty outcome ── */}
-          {stageIdx(stage) >= stageIdx('Published') && (
-            <>
-              <div className="grid gap-1.5">
-                <Label htmlFor="date-disclosed">Date Publicly Disclosed</Label>
-                <Input id="date-disclosed" type="date" value={dateDisclosed} onChange={e => setDateDisclosed(e.target.value)} />
-              </div>
-
-              {bountyEligible === 1 && (
-                <div>
-                  <p className="text-sm font-semibold mb-3">Bounty Outcome</p>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="grid gap-1.5">
-                      <Label>Status</Label>
-                      <Select value={bountyStatus} onValueChange={v => setBountyStatus(v as BountyStatus)}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">None</SelectItem>
-                          <SelectItem value="submitted">Submitted</SelectItem>
-                          <SelectItem value="approved">Approved</SelectItem>
-                          <SelectItem value="paid">Paid</SelectItem>
-                          <SelectItem value="rejected">Rejected</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="grid gap-1.5">
-                      <Label htmlFor="bounty-amount">Amount</Label>
-                      <Input id="bounty-amount" value={bountyAmount} onChange={e => setBountyAmount(e.target.value)} placeholder="$500 USD" />
-                    </div>
-                  </div>
-                  {(bountyStatus === 'paid' || bountyStatus === 'approved') && (
-                    <div className="grid grid-cols-2 gap-4 mt-3">
-                      <div className="grid gap-1.5">
-                        <Label htmlFor="bounty-paid-date">Date Paid</Label>
-                        <Input id="bounty-paid-date" type="date" value={bountyPaidDate} onChange={e => setBountyPaidDate(e.target.value)} />
-                      </div>
-                      <div className="grid gap-1.5">
-                        <Label htmlFor="bounty-url">Report URL</Label>
-                        <Input id="bounty-url" value={bountyUrl} onChange={e => setBountyUrl(e.target.value)} placeholder="https://..." />
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-            </>
-          )}
-        </div>
-
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleSave} disabled={saving || !title.trim() || (!isEdit && !resolvedSwimlaneId)}>
-            {saving ? 'Saving...' : isEdit ? 'Save Changes' : 'Create Vulnerability'}
-          </Button>
-        </DialogFooter>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? 'Saving...' : isEdit ? 'Save Changes' : 'Create Vulnerability'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </FormProvider>
       </DialogContent>
     </Dialog>
   )

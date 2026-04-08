@@ -1,23 +1,20 @@
-export type Stage =
-  | 'Discovery'
-  | 'Vendor Contacted'
-  | 'Negotiating'
-  | 'CVE Requested'
-  | 'Published'
+// Enum + input types are the single source of truth in src/shared/schemas.
+// We re-export them here so existing renderer imports keep working without
+// having to know about zod.
+export type {
+  Severity,
+  Stage,
+  PatchStatus,
+  BountyStatus,
+  ActivityType
+} from '../../../shared/schemas/_common'
+export type { CreateCVEInput, UpdateCVEInput, CVEFilters } from '../../../shared/schemas/cve'
+export type { CreateSwimlaneInput, UpdateSwimlaneInput } from '../../../shared/schemas/swimlane'
+export type { CreateVendorInput, UpdateVendorInput } from '../../../shared/schemas/vendor'
+export type { CreateFollowUpInput } from '../../../shared/schemas/followup'
+export type { CompleteTodoInput } from '../../../shared/schemas/todo'
 
-export type ActivityType =
-  | 'Email Sent'
-  | 'Email Received'
-  | 'Phone Call'
-  | 'Meeting'
-  | 'CVE Requested'
-  | 'Note'
-
-export type Severity = 'Critical' | 'High' | 'Medium' | 'Low'
-
-export type PatchStatus = 'unknown' | 'no_patch' | 'patch_available' | 'wont_fix'
-
-export type BountyStatus = 'none' | 'submitted' | 'approved' | 'paid' | 'rejected'
+import type { Severity, Stage, PatchStatus, BountyStatus } from '../../../shared/schemas/_common'
 
 export interface Vendor {
   id: string
@@ -123,58 +120,3 @@ export interface Attachment {
   created_at: string
 }
 
-export interface CreateCVEInput {
-  swimlane_id: string
-  title: string
-  severity: Severity
-  stage?: Stage
-  cve_id?: string
-  description?: string
-  vendor_contact_name?: string
-  vendor_contact_email?: string
-  vendor_contact_other?: string
-  date_discovered?: string
-  date_vendor_notified?: string
-  disclosure_deadline?: string
-  date_cve_requested?: string
-  date_disclosed?: string
-  affected_component?: string
-  affected_versions?: string
-  cve_eligible?: number | null
-}
-
-export interface UpdateCVEInput {
-  title?: string
-  severity?: Severity
-  stage?: Stage
-  cve_id?: string | null
-  description?: string | null
-  vendor_contact_name?: string | null
-  vendor_contact_email?: string | null
-  vendor_contact_other?: string | null
-  date_discovered?: string | null
-  date_vendor_notified?: string | null
-  disclosure_deadline?: string | null
-  date_cve_requested?: string | null
-  date_disclosed?: string | null
-  affected_component?: string | null
-  affected_versions?: string | null
-  followup_due_date?: string | null
-  escalated_to_vince?: boolean
-  vince_case_id?: string | null
-  patch_status?: PatchStatus
-  patch_url?: string | null
-  cve_eligible?: number | null
-  bounty_eligible?: number | null
-  bounty_status?: BountyStatus
-  bounty_amount?: string | null
-  bounty_paid_date?: string | null
-  bounty_url?: string | null
-}
-
-export interface CVEFilters {
-  swimlane_id?: string
-  stage?: Stage
-  severity?: Severity
-  search?: string
-}

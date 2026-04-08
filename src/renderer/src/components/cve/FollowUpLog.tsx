@@ -2,13 +2,14 @@ import { useState, useEffect } from 'react'
 import { api } from '../../lib/ipc'
 import { formatDate } from '../../lib/utils'
 import { ACTIVITY_TYPES, ACTIVITY_ICONS } from '../../lib/constants'
-import type { FollowUp, ActivityType } from '../../types/cve'
+import type { CVE, FollowUp, ActivityType } from '../../types/cve'
 import { Button } from '../ui/button'
 import { Textarea } from '../ui/textarea'
 import { Input } from '../ui/input'
 import { Label } from '../ui/label'
 import { Trash2, Plus } from 'lucide-react'
 import { cn } from '../../lib/utils'
+import { EscalationPrompt } from './EscalationPrompt'
 
 const ACTIVITY_COLOR: Record<ActivityType, string> = {
   'Email Sent':     'text-blue-400',
@@ -20,10 +21,11 @@ const ACTIVITY_COLOR: Record<ActivityType, string> = {
 }
 
 interface Props {
-  cveId: string
+  cve: CVE
 }
 
-export function FollowUpLog({ cveId }: Props) {
+export function FollowUpLog({ cve }: Props) {
+  const cveId = cve.id
   const [entries, setEntries] = useState<FollowUp[]>([])
   const [note, setNote] = useState('')
   const [date, setDate] = useState('')
@@ -68,6 +70,8 @@ export function FollowUpLog({ cveId }: Props) {
           Log Activity
         </Button>
       </div>
+
+      <EscalationPrompt cve={cve} priorFollowupCount={entries.length} />
 
       {showForm && (
         <div className="bg-muted/40 rounded-md p-3 space-y-2 border border-border">

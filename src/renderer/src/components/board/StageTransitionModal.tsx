@@ -16,6 +16,29 @@ import { ACTIVITY_ICONS } from '../../lib/constants'
 import type { CVE, Stage } from '../../types/cve'
 import { ArrowRight } from 'lucide-react'
 import { cn } from '../../lib/utils'
+import { CVE_ID_REGEX } from '../../../../shared/schemas/_common'
+
+/**
+ * Per-field validator for the transition modal. Returns an error message
+ * string when the value is invalid for that field, or null when fine.
+ *
+ * Kept simple and inline rather than pulling in zod here — this modal only
+ * has a handful of fields and the IPC layer re-validates everything we send
+ * anyway. The point of this is to catch the bad input *before* the user
+ * clicks Confirm Move and watches the card snap back unexplained.
+ */
+function fieldError(key: string, value: string): string | null {
+  const trimmed = value.trim()
+  if (!trimmed) return null
+  switch (key) {
+    case 'cve_id':
+      return CVE_ID_REGEX.test(trimmed)
+        ? null
+        : 'CVE ID must look like CVE-2024-12345'
+    default:
+      return null
+  }
+}
 
 const DAY_CHIPS = [
   { label: '7 days', days: 7 },
@@ -76,9 +99,20 @@ export function StageTransitionModal({ open, cve, targetStage, onConfirm, onCanc
 
   if (!req) return null
 
-  const isValid = visibleFields
+  // Compute per-field error messages once per render so we can show them
+  // inline AND gate the Confirm button on the same logic.
+  const fieldErrors: Record<string, string | null> = {}
+  for (const f of visibleFields) {
+    fieldErrors[f.key] = fieldError(f.key, fieldValues[f.key] ?? '')
+  }
+
+  const allRequiredFilled = visibleFields
     .filter(f => f.required)
     .every(f => (fieldValues[f.key] ?? '').trim().length > 0)
+
+  const noFormatErrors = Object.values(fieldErrors).every(e => e === null)
+
+  const isValid = allRequiredFilled && noFormatErrors
 
   const handleConfirm = () => {
     const fieldUpdates: Partial<CVE> = {}
@@ -208,6 +242,9 @@ export function StageTransitionModal({ open, cve, targetStage, onConfirm, onCanc
                 />
               )}
               {f.hint && <p className="text-xs text-muted-foreground">{f.hint}</p>}
+              {fieldErrors[f.key] && (
+                <p className="text-[11px] text-destructive">{fieldErrors[f.key]}</p>
+              )}
             </div>
           ))}
 

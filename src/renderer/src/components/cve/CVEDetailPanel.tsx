@@ -30,14 +30,20 @@ export function CVEDetailPanel() {
 
   return (
     <>
-      {/* Backdrop */}
+      {/* Backdrop — click outside the card to dismiss */}
       <div
-        className="fixed inset-0 z-30 bg-black/40"
+        className="fixed inset-0 z-30 bg-black/50 flex items-center justify-center p-6"
         onClick={() => selectCVE(null)}
       />
 
-      {/* Panel */}
-      <div className="fixed right-0 top-0 h-full w-[480px] z-40 bg-card border-l border-border shadow-2xl flex flex-col overflow-hidden">
+      {/* Centered card */}
+      <div
+        className="fixed inset-0 z-40 flex items-center justify-center p-6 pointer-events-none"
+      >
+        <div
+          onClick={(e) => e.stopPropagation()}
+          className="pointer-events-auto w-full max-w-3xl max-h-[90vh] bg-card border border-border rounded-lg shadow-2xl flex flex-col overflow-hidden"
+        >
         {/* Header */}
         <div className="flex items-start gap-3 p-4 border-b border-border shrink-0">
           <div className="flex-1 min-w-0">
@@ -68,62 +74,18 @@ export function CVEDetailPanel() {
 
         {/* Scrollable body */}
         <div className="flex-1 overflow-y-auto p-4 space-y-5">
-          {/* Swimlane info */}
+          {/* Created / updated metadata */}
           <div className="text-xs text-muted-foreground">
             Created {formatDate(cve.created_at)} · Updated {formatDate(cve.updated_at)}
           </div>
 
-          {/* Vendor Contact */}
-          {(cve.vendor_contact_name || cve.vendor_contact_email) && (
+          {/* Description / Reproduction steps */}
+          {cve.description && (
             <div>
-              <p className="text-sm font-semibold mb-2">Vendor Contact</p>
-              <div className="space-y-0.5 text-sm">
-                {cve.vendor_contact_name && <p>{cve.vendor_contact_name}</p>}
-                {cve.vendor_contact_email && (
-                  <p className="text-muted-foreground flex items-center gap-1">
-                    {cve.vendor_contact_email}
-                    <a href={`mailto:${cve.vendor_contact_email}`} className="hover:text-primary">
-                      <ExternalLink className="w-3 h-3" />
-                    </a>
-                  </p>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Timeline */}
-          <TimelineMilestones cve={cve} />
-
-          {/* Follow-up action */}
-          {(cve.stage === 'Vendor Contacted' || cve.stage === 'Negotiating' || cve.stage === 'CVE Requested') && (
-            <div className="bg-muted/30 border border-border rounded-lg p-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <BellRing className="w-4 h-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-xs font-semibold">
-                      {cve.followup_due_date
-                        ? (() => {
-                            const days = daysUntil(cve.followup_due_date)
-                            if (days === null) return `Follow-up: ${formatDate(cve.followup_due_date)}`
-                            if (days < 0) return `Follow-up overdue by ${Math.abs(days)}d`
-                            if (days === 0) return 'Follow up today'
-                            return `Follow up in ${days}d (${formatDate(cve.followup_due_date)})`
-                          })()
-                        : 'No follow-up date set'}
-                    </p>
-                  </div>
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-7 text-xs gap-1.5"
-                  onClick={() => setFollowupOpen(true)}
-                >
-                  <BellRing className="w-3 h-3" />
-                  {cve.followup_due_date ? 'Follow Up' : 'Set Reminder'}
-                </Button>
-              </div>
+              <p className="text-sm font-semibold mb-2">Reproduction Steps / Description</p>
+              <pre className="text-xs bg-muted rounded-md p-3 whitespace-pre-wrap font-mono overflow-x-auto">
+                {cve.description}
+              </pre>
             </div>
           )}
 
@@ -145,7 +107,7 @@ export function CVEDetailPanel() {
             </div>
           )}
 
-          {/* Patch status */}
+          {/* Status badges: patch, bounty, VINCE escalation */}
           {cve.patch_status !== 'unknown' && (
             <div className="flex items-center gap-2 flex-wrap">
               {cve.patch_status === 'no_patch' && (
@@ -160,7 +122,7 @@ export function CVEDetailPanel() {
               )}
               {cve.patch_status === 'wont_fix' && (
                 <span className="inline-flex items-center gap-1 text-xs font-semibold text-yellow-400 bg-yellow-500/10 rounded px-2 py-1">
-                  <AlertTriangle className="w-3 h-3" /> Won't Fix
+                  <AlertTriangle className="w-3 h-3" /> Won&apos;t Fix
                 </span>
               )}
               {cve.patch_url && (
@@ -171,7 +133,6 @@ export function CVEDetailPanel() {
             </div>
           )}
 
-          {/* Bounty info */}
           {(cve.bounty_eligible === 1 || (cve.bounty_status && cve.bounty_status !== 'none')) && (
             <div className="flex items-center gap-2 flex-wrap">
               {cve.bounty_status === 'paid' && (
@@ -205,7 +166,6 @@ export function CVEDetailPanel() {
             </div>
           )}
 
-          {/* VINCE escalation */}
           {cve.escalated_to_vince === 1 && (
             <div className="text-xs bg-orange-500/10 text-orange-400 rounded px-2.5 py-1.5 flex items-center gap-1.5">
               <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
@@ -216,30 +176,75 @@ export function CVEDetailPanel() {
             </div>
           )}
 
+          {/* Vendor Contact */}
+          {(cve.vendor_contact_name || cve.vendor_contact_email) && (
+            <div>
+              <p className="text-sm font-semibold mb-2">Vendor Contact</p>
+              <div className="space-y-0.5 text-sm">
+                {cve.vendor_contact_name && <p>{cve.vendor_contact_name}</p>}
+                {cve.vendor_contact_email && (
+                  <p className="text-muted-foreground flex items-center gap-1">
+                    {cve.vendor_contact_email}
+                    <a href={`mailto:${cve.vendor_contact_email}`} className="hover:text-primary">
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Timeline */}
+          <TimelineMilestones cve={cve} />
+
+          <Separator />
+
           {/* Checklist */}
           <TodoList cveId={cve.id} />
 
           <Separator />
 
-          {/* Description */}
-          {cve.description && (
-            <div>
-              <p className="text-sm font-semibold mb-2">Reproduction Steps / Description</p>
-              <pre className="text-xs bg-muted rounded-md p-3 whitespace-pre-wrap font-mono overflow-x-auto">
-                {cve.description}
-              </pre>
+          {/* Follow-up action box (paired with the follow-up log below) */}
+          {(cve.stage === 'Vendor Contacted' || cve.stage === 'Negotiating' || cve.stage === 'CVE Requested') && (
+            <div className="bg-muted/30 border border-border rounded-lg p-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <BellRing className="w-4 h-4 text-muted-foreground" />
+                  <div>
+                    <p className="text-xs font-semibold">
+                      {cve.followup_due_date
+                        ? (() => {
+                            const days = daysUntil(cve.followup_due_date)
+                            if (days === null) return `Follow-up: ${formatDate(cve.followup_due_date)}`
+                            if (days < 0) return `Follow-up overdue by ${Math.abs(days)}d`
+                            if (days === 0) return 'Follow up today'
+                            return `Follow up in ${days}d (${formatDate(cve.followup_due_date)})`
+                          })()
+                        : 'No follow-up date set'}
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-xs gap-1.5"
+                  onClick={() => setFollowupOpen(true)}
+                >
+                  <BellRing className="w-3 h-3" />
+                  {cve.followup_due_date ? 'Follow Up' : 'Set Reminder'}
+                </Button>
+              </div>
             </div>
           )}
 
-          <Separator />
-
           {/* Follow-up log */}
-          <FollowUpLog cveId={cve.id} />
+          <FollowUpLog cve={cve} />
 
           <Separator />
 
           {/* Attachments */}
           <AttachmentList cveId={cve.id} />
+        </div>
         </div>
       </div>
 

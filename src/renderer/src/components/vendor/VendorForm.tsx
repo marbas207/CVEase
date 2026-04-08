@@ -1,4 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useEffect } from 'react'
+import { useForm, type SubmitHandler } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 import {
   Dialog,
   DialogContent,
@@ -13,6 +15,8 @@ import { Label } from '../ui/label'
 import { Textarea } from '../ui/textarea'
 import { useBoardStore } from '../../store/boardStore'
 import type { Vendor } from '../../types/cve'
+import { VendorFormValues, VENDOR_FORM_DEFAULTS } from '../../../../shared/schemas/vendor'
+import { FieldError } from '../cve/form/FieldError'
 
 interface Props {
   open: boolean
@@ -20,68 +24,73 @@ interface Props {
   vendor?: Vendor
 }
 
+function initialValues(vendor: Vendor | undefined): VendorFormValues {
+  if (!vendor) return VENDOR_FORM_DEFAULTS
+  return {
+    name: vendor.name,
+    security_contact_name: vendor.security_contact_name ?? '',
+    security_contact_email: vendor.security_contact_email ?? '',
+    security_contact_other: vendor.security_contact_other ?? '',
+    is_cna: vendor.is_cna === 1,
+    has_bounty_program: vendor.has_bounty_program === 1,
+    bounty_program_url: vendor.bounty_program_url ?? '',
+    url: vendor.url ?? '',
+    notes: vendor.notes ?? ''
+  }
+}
+
 export function VendorForm({ open, onOpenChange, vendor }: Props) {
   const { addVendor, updateVendor } = useBoardStore()
   const isEdit = !!vendor
 
-  const [name, setName] = useState('')
-  const [contactName, setContactName] = useState('')
-  const [contactEmail, setContactEmail] = useState('')
-  const [contactOther, setContactOther] = useState('')
-  const [isCna, setIsCna] = useState(false)
-  const [hasBountyProgram, setHasBountyProgram] = useState(false)
-  const [bountyProgramUrl, setBountyProgramUrl] = useState('')
-  const [url, setUrl] = useState('')
-  const [notes, setNotes] = useState('')
-  const [saving, setSaving] = useState(false)
+  const form = useForm<VendorFormValues>({
+    resolver: zodResolver(VendorFormValues),
+    defaultValues: initialValues(vendor),
+    mode: 'onBlur'
+  })
+  const {
+    register,
+    handleSubmit,
+    reset,
+    watch,
+    setValue,
+    formState: { errors, isSubmitting }
+  } = form
+
+  const watchedIsCna = watch('is_cna')
+  const watchedHasBounty = watch('has_bounty_program')
 
   useEffect(() => {
-    if (open) {
-      setName(vendor?.name ?? '')
-      setContactName(vendor?.security_contact_name ?? '')
-      setContactEmail(vendor?.security_contact_email ?? '')
-      setContactOther(vendor?.security_contact_other ?? '')
-      setIsCna(vendor?.is_cna === 1)
-      setHasBountyProgram(vendor?.has_bounty_program === 1)
-      setBountyProgramUrl(vendor?.bounty_program_url ?? '')
-      setUrl(vendor?.url ?? '')
-      setNotes(vendor?.notes ?? '')
-    }
-  }, [open, vendor])
+    if (open) reset(initialValues(vendor))
+  }, [open, vendor, reset])
 
-  const handleSave = async () => {
-    if (!name.trim()) return
-    setSaving(true)
-    try {
-      if (isEdit && vendor) {
-        await updateVendor(vendor.id, {
-          name: name.trim(),
-          security_contact_name: contactName.trim() || null,
-          security_contact_email: contactEmail.trim() || null,
-          security_contact_other: contactOther.trim() || null,
-          is_cna: isCna,
-          has_bounty_program: hasBountyProgram,
-          bounty_program_url: bountyProgramUrl.trim() || null,
-          url: url.trim() || null,
-          notes: notes.trim() || null
-        })
-      } else {
-        await addVendor({
-          name: name.trim(),
-          security_contact_name: contactName.trim() || undefined,
-          security_contact_email: contactEmail.trim() || undefined,
-          security_contact_other: contactOther.trim() || undefined,
-          is_cna: isCna,
-          has_bounty_program: hasBountyProgram,
-          bounty_program_url: bountyProgramUrl.trim() || undefined,
-          url: url.trim() || undefined,
-          notes: notes.trim() || undefined
-        })
-      }
-      onOpenChange(false)
-    } finally {
-      setSaving(false)
+  const onSubmit: SubmitHandler<VendorFormValues> = async (values) => {
+    if (isEdit && vendor) {
+      await updateVendor(vendor.id, {
+        name: values.name.trim(),
+        security_contact_name: values.security_contact_name.trim() || null,
+        security_contact_email: values.security_contact_email.trim() || null,
+        security_contact_other: values.security_contact_other.trim() || null,
+        is_cna: values.is_cna,
+        has_bounty_program: values.has_bounty_program,
+        bounty_program_url: values.bounty_program_url.trim() || null,
+        url: values.url.trim() || null,
+        notes: values.notes.trim() || null
+      })
+    } else {
+      await addVendor({
+        name: values.name.trim(),
+        security_contact_name: values.security_contact_name.trim() || undefined,
+        security_contact_email: values.security_contact_email.trim() || undefined,
+        security_contact_other: values.security_contact_other.trim() || undefined,
+        is_cna: values.is_cna,
+        has_bounty_program: values.has_bounty_program,
+        bounty_program_url: values.bounty_program_url.trim() || undefined,
+        url: values.url.trim() || undefined,
+        notes: values.notes.trim() || undefined
+      })
     }
+    onOpenChange(false)
   }
 
   return (
@@ -95,16 +104,12 @@ export function VendorForm({ open, onOpenChange, vendor }: Props) {
               : 'Set up a vendor with their security team details. This info will be pre-filled when creating new CVEs.'}
           </DialogDescription>
         </DialogHeader>
-        <div className="grid gap-4 py-2">
+
+        <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4 py-2">
           <div className="grid gap-1.5">
             <Label htmlFor="v-name">Vendor / Organization Name *</Label>
-            <Input
-              id="v-name"
-              value={name}
-              onChange={e => setName(e.target.value)}
-              placeholder="e.g. Apache Software Foundation"
-              autoFocus
-            />
+            <Input id="v-name" {...register('name')} placeholder="e.g. Apache Software Foundation" autoFocus />
+            <FieldError message={errors.name?.message} />
           </div>
 
           <div>
@@ -112,22 +117,12 @@ export function VendorForm({ open, onOpenChange, vendor }: Props) {
             <div className="grid gap-3">
               <div className="grid gap-1.5">
                 <Label htmlFor="v-contact-name">Contact Name / Team</Label>
-                <Input
-                  id="v-contact-name"
-                  value={contactName}
-                  onChange={e => setContactName(e.target.value)}
-                  placeholder="e.g. Security Response Team"
-                />
+                <Input id="v-contact-name" {...register('security_contact_name')} placeholder="e.g. Security Response Team" />
               </div>
               <div className="grid gap-1.5">
                 <Label htmlFor="v-contact-email">Email</Label>
-                <Input
-                  id="v-contact-email"
-                  type="email"
-                  value={contactEmail}
-                  onChange={e => setContactEmail(e.target.value)}
-                  placeholder="security@vendor.com"
-                />
+                <Input id="v-contact-email" type="email" {...register('security_contact_email')} placeholder="security@vendor.com" />
+                <FieldError message={errors.security_contact_email?.message} />
               </div>
             </div>
           </div>
@@ -135,13 +130,13 @@ export function VendorForm({ open, onOpenChange, vendor }: Props) {
           <div className="flex items-center gap-3">
             <button
               type="button"
-              onClick={() => setIsCna(!isCna)}
-              className={`relative w-9 h-5 rounded-full transition-colors ${isCna ? 'bg-primary' : 'bg-muted'}`}
+              onClick={() => setValue('is_cna', !watchedIsCna)}
+              className={`relative w-9 h-5 rounded-full transition-colors ${watchedIsCna ? 'bg-primary' : 'bg-muted'}`}
             >
-              <span className={`block w-4 h-4 rounded-full bg-white shadow transition-transform ${isCna ? 'translate-x-4' : 'translate-x-0.5'}`} />
+              <span className={`block w-4 h-4 rounded-full bg-white shadow transition-transform ${watchedIsCna ? 'translate-x-4' : 'translate-x-0.5'}`} />
             </button>
             <div>
-              <Label className="cursor-pointer" onClick={() => setIsCna(!isCna)}>
+              <Label className="cursor-pointer" onClick={() => setValue('is_cna', !watchedIsCna)}>
                 Vendor is a CNA
               </Label>
               <p className="text-[11px] text-muted-foreground">CVE Numbering Authority, can assign CVE IDs directly</p>
@@ -151,58 +146,50 @@ export function VendorForm({ open, onOpenChange, vendor }: Props) {
           <div className="flex items-center gap-3">
             <button
               type="button"
-              onClick={() => setHasBountyProgram(!hasBountyProgram)}
-              className={`relative w-9 h-5 rounded-full transition-colors ${hasBountyProgram ? 'bg-primary' : 'bg-muted'}`}
+              onClick={() => setValue('has_bounty_program', !watchedHasBounty)}
+              className={`relative w-9 h-5 rounded-full transition-colors ${watchedHasBounty ? 'bg-primary' : 'bg-muted'}`}
             >
-              <span className={`block w-4 h-4 rounded-full bg-white shadow transition-transform ${hasBountyProgram ? 'translate-x-4' : 'translate-x-0.5'}`} />
+              <span className={`block w-4 h-4 rounded-full bg-white shadow transition-transform ${watchedHasBounty ? 'translate-x-4' : 'translate-x-0.5'}`} />
             </button>
             <div>
-              <Label className="cursor-pointer" onClick={() => setHasBountyProgram(!hasBountyProgram)}>
+              <Label className="cursor-pointer" onClick={() => setValue('has_bounty_program', !watchedHasBounty)}>
                 Bug Bounty Program
               </Label>
               <p className="text-[11px] text-muted-foreground">Vendor offers a bug bounty or vulnerability rewards program</p>
             </div>
           </div>
-          {hasBountyProgram && (
+          {watchedHasBounty && (
             <div className="grid gap-1.5">
               <Label htmlFor="v-bounty-url">Bounty Program URL</Label>
-              <Input
-                id="v-bounty-url"
-                value={bountyProgramUrl}
-                onChange={e => setBountyProgramUrl(e.target.value)}
-                placeholder="https://hackerone.com/vendor"
-              />
+              <Input id="v-bounty-url" {...register('bounty_program_url')} placeholder="https://hackerone.com/vendor" />
+              <FieldError message={errors.bounty_program_url?.message} />
             </div>
           )}
 
           <div className="grid gap-1.5">
             <Label htmlFor="v-url">Vendor Website</Label>
-            <Input
-              id="v-url"
-              value={url}
-              onChange={e => setUrl(e.target.value)}
-              placeholder="https://vendor.com"
-            />
-            <p className="text-[11px] text-muted-foreground">Used to display the vendor's favicon on the Kanban board</p>
+            <Input id="v-url" {...register('url')} placeholder="https://vendor.com" />
+            <FieldError message={errors.url?.message} />
+            <p className="text-[11px] text-muted-foreground">Used to display the vendor&apos;s favicon on the Kanban board</p>
           </div>
 
           <div className="grid gap-1.5">
             <Label htmlFor="v-notes">Notes</Label>
             <Textarea
               id="v-notes"
-              value={notes}
-              onChange={e => setNotes(e.target.value)}
+              {...register('notes')}
               placeholder="Response time expectations, preferred disclosure process, previous interactions..."
               className="min-h-[80px] text-sm"
             />
           </div>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleSave} disabled={saving || !name.trim()}>
-            {saving ? 'Saving...' : isEdit ? 'Save Changes' : 'Add Vendor'}
-          </Button>
-        </DialogFooter>
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? 'Saving...' : isEdit ? 'Save Changes' : 'Add Vendor'}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   )
