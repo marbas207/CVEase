@@ -1,0 +1,170 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+  # Required so the Windows job can request an OIDC token to authenticate
+  # to Azure Trusted Signing without storing long-lived credentials.
+  id-token: write
+
+env:
+  CSC_IDENTITY_AUTO_DISCOVERY: false
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            platform: win
+            artifact: CVEase-win
+          - os: macos-latest
+            platform: mac
+            artifact: CVEase-mac-arm64
+          - os: macos-latest
+            platform: mac-x64
+            artifact: CVEase-mac-x64
+          - os: ubuntu-latest
+            platform: linux
+            artifact: CVEase-linux
+
+    runs-on: ${{ matrix.os }}
+    # Pin Windows builds to the `release` environment so the federated
+    # identity credential's `repo:OWNER/REPO:environment:release` subject
+    # matches the OIDC token GitHub hands out. Other matrix legs don't
+    # need it — they don't authenticate to Azure.
+    environment: ${{ matrix.platform == 'win' && 'release' || '' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      # ── Windows packaging + Trusted Signing ──
+      # Two-phase: first produce the unpacked dir, sign every binary inside
+      # it (the inner CVEase.exe + helpers Windows would otherwise warn on
+      # at launch), then build the NSIS installer from the prepackaged dir
+      # and sign that too. Signing both halves is what keeps SmartScreen
+      # quiet on download AND on launch after install.
+      - name: Package unpacked dir (Windows)
+        if: matrix.platform == 'win'
+        run: npx electron-builder --win dir --publish never
+
+      - name: Azure login (OIDC)
+        if: matrix.platform == 'win'
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Sign inner binaries (Windows)
+        if: matrix.platform == 'win'
+        uses: azure/trusted-signing-action@v0.5.1
+        with:
+          endpoint: https://eus.codesigning.azure.net/
+          trusted-signing-account-name: Marbasec
+          certificate-profile-name: cvease-public-trust
+          files-folder: dist/win-unpacked
+          files-folder-filter: exe,dll
+          files-folder-recurse: true
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
+
+      - name: Build NSIS installer from signed dir (Windows)
+        if: matrix.platform == 'win'
+        run: npx electron-builder --win nsis --prepackaged dist/win-unpacked --publish never
+
+      - name: Sign NSIS installer (Windows)
+        if: matrix.platform == 'win'
+        uses: azure/trusted-signing-action@v0.5.1
+        with:
+          endpoint: https://eus.codesigning.azure.net/
+          trusted-signing-account-name: Marbasec
+          certificate-profile-name: cvease-public-trust
+          files-folder: dist
+          files-folder-filter: exe
+          files-folder-recurse: false
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
+
+      - name: Package (macOS ARM)
+        if: matrix.platform == 'mac'
+        run: npx electron-builder --mac dmg --config.mac.identity=null --publish never
+
+      - name: Package (macOS x64)
+        if: matrix.platform == 'mac-x64'
+        run: npx electron-builder --mac dmg --x64 --config.mac.identity=null --publish never
+
+      - name: Package (Linux)
+        if: matrix.platform == 'linux'
+        run: npx electron-builder --linux AppImage --publish never
+
+      - name: Rename Windows installer
+        if: matrix.platform == 'win'
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem dist/*.exe | Select-Object -First 1
+          Move-Item $installer.FullName "dist/${{ matrix.artifact }}-Setup.exe"
+
+      - name: Rename macOS artifact
+        if: matrix.platform == 'mac' || matrix.platform == 'mac-x64'
+        run: mv dist/*.dmg dist/${{ matrix.artifact }}.dmg
+
+      - name: Rename Linux artifact
+        if: matrix.platform == 'linux'
+        run: mv dist/*.AppImage dist/${{ matrix.artifact }}.AppImage
+
+      - name: Upload artifact (Windows)
+        if: matrix.platform == 'win'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: dist/${{ matrix.artifact }}-Setup.exe
+
+      - name: Upload artifact (macOS)
+        if: matrix.platform == 'mac' || matrix.platform == 'mac-x64'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: dist/${{ matrix.artifact }}.dmg
+
+      - name: Upload artifact (Linux)
+        if: matrix.platform == 'linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: dist/${{ matrix.artifact }}.AppImage
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            artifacts/**/CVEase-*
+          generate_release_notes: true
