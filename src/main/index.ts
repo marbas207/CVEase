@@ -35,9 +35,9 @@ const PROD_CSP = [
   "default-src 'self'",
   "script-src 'self'",
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data:",
+  "img-src 'self' data: https://www.google.com",
   "font-src 'self' data:",
-  "connect-src 'self'",
+  "connect-src 'self' https://www.google.com",
   "object-src 'none'",
   "base-uri 'none'",
   "frame-ancestors 'none'"

@@ -9,6 +9,7 @@ import { useDeadlineStatus } from '../../hooks/useDeadlineStatus'
 import type { CVE } from '../../types/cve'
 import { useBoardStore } from '../../store/boardStore'
 import { tagsFromString } from '../../lib/tags'
+import { Trophy } from 'lucide-react'
 
 interface Props {
   cve: CVE
@@ -24,6 +25,7 @@ function isFollowupOverdue(cve: CVE): boolean {
 
 export function CVECard({ cve, isDragOverlay = false }: Props) {
   const selectCVE = useBoardStore(s => s.selectCVE)
+  const archiveCVE = useBoardStore(s => s.archiveCVE)
   const { status } = useDeadlineStatus(cve)
   const followupOverdue = isFollowupOverdue(cve)
 
@@ -125,8 +127,22 @@ export function CVECard({ cve, isDragOverlay = false }: Props) {
         <span className="text-xs text-muted-foreground truncate max-w-[60%]">
           {cve.vendor_contact_name ?? cve.vendor_contact_email ?? ''}
         </span>
-        <FollowupDueBadge cve={cve} />
-        <DeadlineBadge cve={cve} />
+        <div className="flex items-center gap-1.5">
+          {cve.stage === 'Published' && (
+            <button
+              title="Move to Hall of Fame"
+              onClick={(e) => {
+                e.stopPropagation()
+                archiveCVE(cve.id)
+              }}
+              className="text-yellow-500/60 hover:text-yellow-400 transition-colors"
+            >
+              <Trophy className="w-3.5 h-3.5" />
+            </button>
+          )}
+          <FollowupDueBadge cve={cve} />
+          <DeadlineBadge cve={cve} />
+        </div>
       </div>
     </div>
   )
