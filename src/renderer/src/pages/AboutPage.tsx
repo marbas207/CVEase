@@ -4,7 +4,7 @@ import logoLight from '@/assets/cvease-logo-light.svg'
 import logoDark from '@/assets/cvease-logo-dark.svg'
 import mascotImg from '@/assets/marbas-mascot.png'
 
-const APP_VERSION = '1.2.6'
+const APP_VERSION = '1.2.7'
 
 export function AboutPage() {
   return (
